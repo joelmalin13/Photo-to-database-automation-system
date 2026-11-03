@@ -1,5 +1,5 @@
 -- PIXELMIND: AI-Powered Visual Intelligence Database Schema
--- Compatible with MySQL 8.0+
+-- Compatible with MySQL 8.0+ and PostgreSQL (Supabase / Neon)
 
 CREATE DATABASE IF NOT EXISTS pixelmind CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE pixelmind;
@@ -17,14 +17,17 @@ CREATE TABLE IF NOT EXISTS images (
     category VARCHAR(100) NOT NULL DEFAULT 'Uncategorized',
     scene VARCHAR(100) NULL,
     environment VARCHAR(50) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'done',
+    caption TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_images_category (category),
     INDEX idx_images_scene (scene),
     INDEX idx_images_environment (environment),
+    INDEX idx_images_status (status),
     INDEX idx_images_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Detections per image (from YOLO)
+-- 2. Detections per image (from YOLO or Gemini Vision)
 CREATE TABLE IF NOT EXISTS detections (
     id INT AUTO_INCREMENT PRIMARY KEY,
     image_id INT NOT NULL,
@@ -40,10 +43,11 @@ CREATE TABLE IF NOT EXISTS detections (
     INDEX idx_detections_image_id (image_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Image DNA (fingerprint, colors, CLIP embedding)
+-- 3. Image DNA (dominant colors, JSON embedding array, composition)
 CREATE TABLE IF NOT EXISTS image_dna (
     image_id INT PRIMARY KEY,
     dominant_colors_json JSON NULL,
+    embedding_json JSON NULL,
     embedding_blob LONGBLOB NULL,
     composition_json JSON NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

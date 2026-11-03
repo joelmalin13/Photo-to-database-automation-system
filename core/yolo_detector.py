@@ -2,16 +2,18 @@
 
 Runs CPU-friendly YOLOv8n inference, extracts bounding coordinates and confidence scores,
 groups detections by label, and renders an annotated visualization with color-coded bounding boxes.
+Renders visualizations with pure Pillow ImageDraw (zero OpenCV dependency).
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
+import io
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import uuid
-import cv2
 import numpy as np
+from PIL import Image as PILImage, ImageDraw
 
 from config.settings import ANNOTATED_DIR, YOLO_MODEL_NAME, logger
 from core.categorizer import get_label_category
@@ -19,19 +21,19 @@ from core.decorators import timed
 from core.detector_base import BaseDetector, DetectionItem, DetectionResult
 from core.exceptions import DetectionError
 
-# Category palette for bounding boxes (BGR format for OpenCV)
+# Category palette for bounding boxes (RGB format for Pillow)
 CATEGORY_COLORS: Dict[str, tuple[int, int, int]] = {
-    "Vehicles": (40, 40, 198),         # Crimson red
-    "Human activities": (198, 90, 40), # Coral / orange
-    "Animals": (40, 180, 40),          # Green
-    "Nature": (30, 150, 80),           # Forest green
-    "Technology": (180, 130, 30),      # Blue/teal
-    "Electronics": (200, 160, 20),     # Azure
-    "Food": (30, 180, 210),            # Gold / yellow
-    "Architecture": (120, 120, 120),   # Gray
-    "Sports": (160, 40, 180),          # Purple
+    "Vehicles": (220, 38, 38),         # Crimson red
+    "Human activities": (37, 99, 235),  # Blue
+    "Animals": (16, 185, 129),         # Green
+    "Nature": (34, 197, 94),           # Forest green
+    "Technology": (99, 102, 241),      # Indigo
+    "Electronics": (147, 51, 234),     # Purple
+    "Food": (245, 158, 11),            # Amber
+    "Architecture": (13, 148, 136),    # Teal
+    "Sports": (236, 72, 153),          # Pink
 }
-DEFAULT_BOX_COLOR = (70, 70, 70)
+DEFAULT_BOX_COLOR = (120, 120, 120)
 
 
 class YoloDetector(BaseDetector):
@@ -43,47 +45,63 @@ class YoloDetector(BaseDetector):
     def _get_model(cls) -> Any:
         """Lazy singleton loader for the YOLOv8 model."""
         if cls._model is None:
-            from ultralytics import YOLO
+            try:
+                from ultralytics import YOLO
 
-            logger.info("Loading YOLO model: %s (auto-download on first run)...", YOLO_MODEL_NAME)
-            cls._model = YOLO(YOLO_MODEL_NAME)
-            logger.info("YOLO model loaded successfully.")
+                logger.info("Loading YOLO model: %s (auto-download on first run)...", YOLO_MODEL_NAME)
+                cls._model = YOLO(YOLO_MODEL_NAME)
+                logger.info("YOLO model loaded successfully.")
+            except ImportError as exc:
+                raise DetectionError(
+                    "Ultralytics is not installed. Please install requirements-local.txt or use AI_MODE=cloud."
+                ) from exc
+            except Exception as exc:
+                raise DetectionError(f"Failed to load YOLO weights ({YOLO_MODEL_NAME}): {exc}") from exc
         return cls._model
 
     @timed
     def detect(
         self,
-        image_path: Path,
+        image_input: Any,
         confidence_threshold: float = 0.25,
         save_annotated: bool = True,
         output_dir: Optional[Path] = None,
     ) -> DetectionResult:
-        """Execute object detection and generate annotated bounding boxes."""
-        if not image_path.exists():
-            raise DetectionError(f"Image not found at {image_path}")
+        """Execute YOLOv8n object detection and produce annotated visualization."""
+        if isinstance(image_input, (str, Path)):
+            pil_img = PILImage.open(str(image_input)).convert("RGB")
+            fname = Path(image_input).name
+        elif isinstance(image_input, bytes):
+            pil_img = PILImage.open(io.BytesIO(image_input)).convert("RGB")
+            fname = "uploaded.jpg"
+        elif isinstance(image_input, PILImage.Image):
+            pil_img = image_input.convert("RGB")
+            fname = "image.jpg"
+        else:
+            raise DetectionError("Unsupported image input type for YoloDetector.")
+
+        model = self._get_model()
 
         try:
-            model = self._get_model()
+            # Ultralytics accepts PIL.Image directly
             results = model.predict(
-                source=str(image_path),
+                source=pil_img,
                 conf=confidence_threshold,
                 verbose=False,
             )
         except Exception as exc:
-            logger.error("YOLO inference failed: %s", exc)
-            raise DetectionError(f"Object detection inference failed: {exc}") from exc
+            raise DetectionError(f"YOLO inference failed: {exc}") from exc
 
         if not results:
-            return DetectionResult(items=[], total_count=0, annotated_path=None, raw_boxes=[])
+            return DetectionResult(items=[], total_count=0, raw_boxes=[])
 
         first_res = results[0]
         boxes = first_res.boxes
         names = first_res.names or {}
 
-        # Read original image for custom bounding box rendering
-        orig_img = cv2.imread(str(image_path))
-        if orig_img is None:
-            raise DetectionError(f"OpenCV could not read image at {image_path}")
+        # Copy original PIL image for bounding box rendering
+        annotated_img = pil_img.copy()
+        draw = ImageDraw.Draw(annotated_img)
 
         grouped_detections: Dict[str, Dict[str, Any]] = defaultdict(
             lambda: {"count": 0, "confidences": [], "bboxes": [], "category": "Uncategorized"}
@@ -119,72 +137,56 @@ class YoloDetector(BaseDetector):
                 grouped["bboxes"].append(box_dict)
                 grouped["category"] = cat
 
-                # Draw bounding box on original image
+                # Draw bounding box
                 box_color = CATEGORY_COLORS.get(cat, DEFAULT_BOX_COLOR)
-                cv2.rectangle(
-                    orig_img,
-                    (int(x1), int(y1)),
-                    (int(x2), int(y2)),
-                    box_color,
-                    2,
-                )
+                draw.rectangle([box_dict["x1"], box_dict["y1"], box_dict["x2"], box_dict["y2"]], outline=box_color, width=3)
 
                 # Draw label badge
                 caption = f"{label_name} {int(conf * 100)}%"
-                (w, h), _ = cv2.getTextSize(caption, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                badge_y1 = max(0, int(y1) - h - 6)
-                badge_y2 = int(y1)
-                cv2.rectangle(
-                    orig_img,
-                    (int(x1), badge_y1),
-                    (int(x1) + w + 8, badge_y2),
-                    box_color,
-                    -1,
-                )
-                cv2.putText(
-                    orig_img,
-                    caption,
-                    (int(x1) + 4, badge_y2 - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (255, 255, 255),
-                    1,
-                    cv2.LINE_AA,
-                )
+                badge_bbox = draw.textbbox((box_dict["x1"], max(0, box_dict["y1"] - 18)), caption)
+                draw.rectangle([badge_bbox[0] - 2, badge_bbox[1] - 2, badge_bbox[2] + 4, badge_bbox[3] + 2], fill=box_color)
+                draw.text((box_dict["x1"], max(0, box_dict["y1"] - 18)), caption, fill=(255, 255, 255))
 
         # Save annotated image
+        buf = io.BytesIO()
+        annotated_img.save(buf, format="JPEG", quality=85)
+        annotated_bytes = buf.getvalue()
+
         annotated_path_str = None
         if save_annotated:
             dest_dir = output_dir or ANNOTATED_DIR
             dest_dir.mkdir(parents=True, exist_ok=True)
-            annotated_filename = f"annotated_{uuid.uuid4().hex[:10]}_{image_path.name}"
+            annotated_filename = f"annotated_{uuid.uuid4().hex[:10]}_{fname}"
             target_path = dest_dir / annotated_filename
-            cv2.imwrite(str(target_path), orig_img)
+            target_path.write_bytes(annotated_bytes)
             annotated_path_str = str(target_path)
 
         # Format detection items
         items: List[DetectionItem] = []
-        total_count = 0
-        for lbl, data in grouped_detections.items():
-            cnt = data["count"]
-            total_count += cnt
-            avg_conf = sum(data["confidences"]) / len(data["confidences"]) if data["confidences"] else 0.0
+        for label, data in grouped_detections.items():
+            avg_conf = (
+                round(sum(data["confidences"]) / len(data["confidences"]), 3)
+                if data["confidences"]
+                else 0.0
+            )
             items.append(
                 DetectionItem(
-                    label=lbl,
+                    label=label,
                     category=data["category"],
-                    count=cnt,
-                    avg_confidence=round(avg_conf, 3),
+                    count=data["count"],
+                    avg_confidence=avg_conf,
                     bboxes=data["bboxes"],
                 )
             )
 
-        # Sort items by count descending
-        items.sort(key=lambda it: it.count, reverse=True)
+        items.sort(key=lambda x: x.count, reverse=True)
+        total_count = sum(item.count for item in items)
 
-        return DetectionResult(
+        res = DetectionResult(
             items=items,
             total_count=total_count,
             annotated_path=annotated_path_str,
             raw_boxes=raw_boxes,
         )
+        res.annotated_bytes = annotated_bytes
+        return res

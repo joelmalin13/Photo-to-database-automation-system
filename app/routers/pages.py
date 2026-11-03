@@ -17,12 +17,37 @@ from app.services.analytics_service import AnalyticsService
 from app.services.dna_service import DnaService
 from app.services.image_service import ImageService
 from app.services.search_service import SearchService
-from config.settings import BASE_DIR, load_categories_config, load_scenes_config
+from config.settings import (
+    AI_MODE,
+    BASE_DIR,
+    GEMINI_API_KEY,
+    GEMINI_EMBED_MODEL,
+    GEMINI_MODEL,
+    IS_VERCEL,
+    STORAGE_BACKEND,
+    SUPABASE_BUCKET,
+    SUPABASE_URL,
+    load_categories_config,
+    load_scenes_config,
+)
 from db.crud import get_image_by_id
 from db.session import get_db_status
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+
+
+def media_url(path: Optional[str]) -> str:
+    """Format stored image path as a usable URL for templates."""
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return f"/{path.lstrip('/')}"
+
+
+templates.env.filters["media_url"] = media_url
+templates.env.globals["media_url"] = media_url
 
 
 def _base_context(request: Request, active_page: str) -> Dict[str, Any]:
@@ -212,4 +237,14 @@ def analytics_page(request: Request, db: Session = Depends(get_db)) -> HTMLRespo
 def settings_page(request: Request) -> HTMLResponse:
     """Render settings and diagnostic telemetry."""
     ctx = _base_context(request, "settings")
+    ctx.update({
+        "ai_mode": AI_MODE,
+        "is_vercel": IS_VERCEL,
+        "detector_model": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n (CPU)",
+        "embedder_model": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",
+        "has_gemini_key": bool(GEMINI_API_KEY),
+        "storage_backend": STORAGE_BACKEND,
+        "supabase_configured": bool(SUPABASE_URL),
+        "supabase_bucket": SUPABASE_BUCKET,
+    })
     return templates.TemplateResponse(request=request, name="settings.html", context=ctx)

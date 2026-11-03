@@ -52,6 +52,8 @@ def create_image(
     category: str = "Uncategorized",
     scene: Optional[str] = None,
     environment: Optional[str] = None,
+    status: str = "done",
+    caption: Optional[str] = None,
 ) -> Image:
     """Insert a new image record into the database."""
     img = Image(
@@ -65,6 +67,8 @@ def create_image(
         category=category,
         scene=scene,
         environment=environment,
+        status=status,
+        caption=caption,
     )
     session.add(img)
     session.flush()
@@ -103,18 +107,31 @@ def set_image_dna(
     session: Session,
     image_id: int,
     dominant_colors: List[Dict[str, Any]],
-    embedding_blob: Optional[bytes],
+    embedding_vector: Optional[Any],
     composition: Dict[str, Any],
 ) -> ImageDNA:
-    """Store or update the visual fingerprint and DNA of an image."""
+    """Store or update the visual fingerprint and DNA of an image with JSON embedding."""
     dna = session.get(ImageDNA, image_id)
     if not dna:
         dna = ImageDNA(image_id=image_id)
         session.add(dna)
 
     dna.dominant_colors_json = dominant_colors
-    dna.embedding_blob = embedding_blob
     dna.composition_json = composition
+
+    # Normalize embedding to JSON list of floats
+    if embedding_vector is not None:
+        if isinstance(embedding_vector, list):
+            dna.embedding_json = [float(x) for x in embedding_vector]
+        elif isinstance(embedding_vector, np.ndarray):
+            dna.embedding_json = embedding_vector.astype(float).tolist()
+        elif isinstance(embedding_vector, bytes):
+            dna.embedding_blob = embedding_vector
+            try:
+                arr = np.frombuffer(embedding_vector, dtype=np.float32)
+                dna.embedding_json = arr.astype(float).tolist()
+            except Exception:
+                pass
     session.flush()
     return dna
 
@@ -205,13 +222,20 @@ def list_images(
 
 
 def get_all_embeddings(session: Session) -> List[Tuple[int, np.ndarray]]:
-    """Retrieve all stored CLIP embeddings as numpy float32 arrays."""
-    stmt = select(ImageDNA.image_id, ImageDNA.embedding_blob).where(
-        ImageDNA.embedding_blob.isnot(None)
+    """Retrieve all stored embeddings as numpy float32 arrays, supporting both JSON and legacy blobs."""
+    stmt = select(ImageDNA.image_id, ImageDNA.embedding_json, ImageDNA.embedding_blob).where(
+        or_(ImageDNA.embedding_json.isnot(None), ImageDNA.embedding_blob.isnot(None))
     )
     rows = session.execute(stmt).all()
     results: List[Tuple[int, np.ndarray]] = []
-    for img_id, blob in rows:
+    for img_id, emb_json, blob in rows:
+        if emb_json:
+            try:
+                arr = np.array(emb_json, dtype=np.float32)
+                results.append((img_id, arr))
+                continue
+            except Exception:
+                pass
         if blob:
             try:
                 arr = np.frombuffer(blob, dtype=np.float32)

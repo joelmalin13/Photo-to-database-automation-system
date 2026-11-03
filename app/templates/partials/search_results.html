@@ -9,7 +9,7 @@
       {% for img in results %}
         <a href="/images/{{ img.id }}" class="group bg-white rounded-xl border border-[#E5E5E5] overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
           <div class="aspect-4/3 bg-gray-100 overflow-hidden relative">
-            <img src="/{{ img.stored_path }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+            <img src="{{ img.image_url or (img.stored_path | media_url) }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
             <!-- Similarity Score Pill -->
             <div class="absolute top-2 right-2 bg-[#C62828] text-white text-[11px] font-black px-2 py-0.5 rounded shadow">
               {{ (img.similarity_score * 100)|round(1) }}% Match

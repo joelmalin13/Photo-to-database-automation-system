@@ -1,0 +1,43 @@
+# Vercel Deployment Exclusions
+# Minimizes serverless function deployment size and avoids uploading local files
+
+# Test suites & benchmarks
+tests/
+.pytest_cache/
+
+# Local data & temporary caches
+data/
+uploads/
+sample_data/
+docs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local AI weights and checkpoints
+models/
+*.pt
+*.onnx
+
+# Binary tooling & local runners
+cloudflared.exe
+watcher.py
+Dockerfile
+docker-compose.yml
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+env/
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+
+# Local requirements
+requirements-local.txt

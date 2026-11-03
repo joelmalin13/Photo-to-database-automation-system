@@ -30,15 +30,17 @@ def timed(func: F) -> F:
 def retry(
     max_attempts: int = 3,
     delay: float = 0.5,
+    delay_seconds: Optional[float] = None,
     backoff: float = 2.0,
     exceptions: tuple = (Exception,),
 ) -> Callable[[F], F]:
     """Decorator to retry a function call with exponential backoff on specified exceptions."""
+    actual_delay = delay_seconds if delay_seconds is not None else delay
 
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            current_delay = delay
+            current_delay = actual_delay
             for attempt in range(1, max_attempts + 1):
                 try:
                     return func(*args, **kwargs)

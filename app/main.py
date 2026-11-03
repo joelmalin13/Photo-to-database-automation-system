@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Dict
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -48,10 +48,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static and media asset directories
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "app" / "static")), name="static")
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
-app.mount("/annotated", StaticFiles(directory=str(ANNOTATED_DIR)), name="annotated")
+# Static asset directory (checks public/static first for Vercel, falls back to app/static)
+static_dir = BASE_DIR / "public" / "static"
+if not static_dir.exists():
+    static_dir = BASE_DIR / "app" / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+# Local media asset directories (mounted safely if directories exist)
+if UPLOAD_DIR.exists():
+    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+if ANNOTATED_DIR.exists():
+    app.mount("/annotated", StaticFiles(directory=str(ANNOTATED_DIR)), name="annotated")
+
+# Health check endpoint for deployment verification
+@app.get("/health", tags=["Health"], summary="Deployment health check")
+def root_health_check() -> Dict[str, Any]:
+    """Root health endpoint for monitoring, uptime verification, and deployment sanity."""
+    from config.settings import (
+        AI_MODE,
+        GEMINI_API_KEY,
+        GEMINI_EMBED_MODEL,
+        GEMINI_MODEL,
+        IS_VERCEL,
+        STORAGE_BACKEND,
+        SUPABASE_URL,
+    )
+    from db.session import get_db_status
+    db_stat = get_db_status()
+    is_healthy = db_stat.get("connected", False)
+    return {
+        "status": "healthy" if is_healthy else "degraded",
+        "mode": AI_MODE,
+        "is_vercel": IS_VERCEL,
+        "database": db_stat,
+        "storage": {
+            "backend": STORAGE_BACKEND,
+            "status": "ready",
+        },
+        "ai": {
+            "detector": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n",
+            "embedder": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",
+            "gemini_configured": bool(GEMINI_API_KEY),
+            "supabase_configured": bool(SUPABASE_URL),
+        },
+    }
 
 # Include HTML page and REST API routers
 app.include_router(pages_router)
@@ -90,5 +131,5 @@ async def not_found_handler(request: Request, exc: Any) -> Any:
         </body>
         </html>
         """,
-        status_code=404,
+        status_code=status.HTTP_404_NOT_FOUND,
     )

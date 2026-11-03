@@ -4,22 +4,21 @@ Implements reverse image search across four selectable modes:
 1. Object similarity (Jaccard index on object counts and labels)
 2. Colour similarity (Palette Euclidean distance in RGB space)
 3. Scene similarity (Scene category and environment match)
-4. Overall similarity (Cosine distance across CLIP 512-dim embeddings)
+4. Overall similarity (Cosine distance across semantic embedding vectors)
 """
 
 from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from PIL import Image as PILImage
 from sqlalchemy.orm import Session
 
 from core.detector_base import get_detector
 from core.dna import extract_dominant_colors
-from core.embedder import ClipEmbedder
-from core.scene import classify_scene
+from core.embedder import get_embedder
 from core.similarity import (
     compute_color_similarity,
     compute_object_similarity,
@@ -34,7 +33,7 @@ class DnaService:
 
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.embedder = ClipEmbedder.get_instance()
+        self.embedder = get_embedder()
 
     def find_similar_by_image(
         self,
@@ -54,16 +53,9 @@ class DnaService:
 
         # Mode 1: Object Similarity
         if mode_clean == "object":
-            # Temporary save for YOLO detector
-            temp_path = Path("data") / "temp_query.jpg"
-            pil_img.save(temp_path)
-            try:
-                detector = get_detector("yolo")
-                q_det = detector.detect(temp_path, save_annotated=False)
-                q_items = q_det.items
-            finally:
-                if temp_path.exists():
-                    temp_path.unlink()
+            detector = get_detector()
+            q_det = detector.detect(pil_img, save_annotated=False)
+            q_items = q_det.items
 
             for img, dna, detections in stored_items:
                 sim = compute_object_similarity(q_items, detections)
@@ -79,28 +71,31 @@ class DnaService:
 
         # Mode 3: Scene Similarity
         elif mode_clean == "scene":
-            temp_path = Path("data") / "temp_query.jpg"
-            pil_img.save(temp_path)
-            try:
-                q_scene, q_env = classify_scene(temp_path, self.embedder)
-            finally:
-                if temp_path.exists():
-                    temp_path.unlink()
+            detector = get_detector()
+            q_det = detector.detect(pil_img, save_annotated=False)
+            q_scene = q_det.scene or "general"
+            q_env = q_det.environment or "outdoor"
 
             for img, dna, detections in stored_items:
                 sim = compute_scene_similarity(q_scene, q_env, img.scene, img.environment)
                 scored_results.append((img, sim))
 
-        # Mode 4: Overall CLIP Similarity (Default)
+        # Mode 4: Overall Similarity (Default)
         else:
-            q_vec = self.embedder.embed_image(pil_img)
+            detector = get_detector()
+            q_det = detector.detect(pil_img, save_annotated=False)
+            q_vec = self.embedder.embed_image_metadata(
+                image_input=pil_img,
+                caption=q_det.caption,
+                objects=[it.label for it in q_det.items],
+                scene=q_det.scene,
+                environment=q_det.environment,
+            )
+
             for img, dna, detections in stored_items:
-                if dna and dna.embedding_blob:
-                    try:
-                        t_vec = np.frombuffer(dna.embedding_blob, dtype=np.float32)
-                        sim = compute_overall_similarity(q_vec, t_vec)
-                    except Exception:
-                        sim = 0.0
+                t_vec = dna.get_embedding_vector() if dna else None
+                if q_vec and t_vec:
+                    sim = self.embedder.compute_similarity(q_vec, t_vec)
                 else:
                     sim = 0.0
                 scored_results.append((img, sim))
@@ -155,20 +150,11 @@ class DnaService:
                 scored_results.append((img, sim))
 
         else:
-            q_vec = None
-            if target_img.dna and target_img.dna.embedding_blob:
-                try:
-                    q_vec = np.frombuffer(target_img.dna.embedding_blob, dtype=np.float32)
-                except Exception:
-                    q_vec = None
-
+            q_vec = target_img.dna.get_embedding_vector() if target_img.dna else None
             for img, dna, detections in other_items:
-                if dna and dna.embedding_blob and q_vec is not None:
-                    try:
-                        t_vec = np.frombuffer(dna.embedding_blob, dtype=np.float32)
-                        sim = compute_overall_similarity(q_vec, t_vec)
-                    except Exception:
-                        sim = 0.0
+                t_vec = dna.get_embedding_vector() if dna else None
+                if q_vec and t_vec:
+                    sim = self.embedder.compute_similarity(q_vec, t_vec)
                 else:
                     sim = 0.0
                 scored_results.append((img, sim))

@@ -73,14 +73,14 @@
         <!-- Annotated Image -->
         <img 
           x-show="showBoxes"
-          src="/{% if image.annotated_path %}{{ image.annotated_path }}{% else %}{{ image.stored_path }}{% endif %}" 
+          src="{{ image.display_annotated_url }}" 
           alt="{{ image.filename }} annotated"
           class="max-h-[520px] w-auto max-w-full rounded-xl object-contain shadow-inner"
         >
         <!-- Original Image -->
         <img 
           x-show="!showBoxes"
-          src="/{{ image.stored_path }}" 
+          src="{{ image.image_url }}" 
           alt="{{ image.filename }}"
           class="max-h-[520px] w-auto max-w-full rounded-xl object-contain shadow-inner"
           x-cloak
@@ -242,7 +242,7 @@
         {% for sim in similar_images %}
           <a href="/images/{{ sim.id }}" class="group block rounded-lg border border-[#E5E5E5] overflow-hidden hover:shadow-md transition">
             <div class="aspect-video bg-gray-100 overflow-hidden relative">
-              <img src="/{{ sim.stored_path }}" class="w-full h-full object-cover group-hover:scale-105 transition">
+              <img src="{{ sim.stored_path | media_url }}" class="w-full h-full object-cover group-hover:scale-105 transition">
               <span class="absolute top-1.5 right-1.5 bg-[#C62828] text-white text-[10px] font-black px-2 py-0.5 rounded">
                 {{ sim.similarity_percentage }}% Match
               </span>

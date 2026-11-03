@@ -10,15 +10,52 @@
     <p class="text-sm text-gray-500 mt-1">Runtime connection status, AI model registries, and visual intelligence thresholds.</p>
   </div>
 
+  <!-- Deployment & AI Mode Card -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div>
+        <h2 class="text-base font-bold text-[#111111]">Operating Environment & AI Mode</h2>
+        <p class="text-xs text-gray-400">Serverless cloud execution or local offline workstation</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        {% if is_vercel %}
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-black text-white">
+          ▲ Vercel Serverless
+        </span>
+        {% endif %}
+        <span class="px-3 py-1 rounded-full text-xs font-bold {% if ai_mode == 'cloud' %}bg-indigo-100 text-indigo-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+          {{ ai_mode|upper }} MODE
+        </span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+      <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <span class="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">AI Mode</span>
+        <span class="font-bold text-gray-800 text-sm mt-0.5 block capitalize">{{ ai_mode }}</span>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <span class="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Gemini Vision API</span>
+        <span class="font-bold text-sm mt-0.5 block {% if has_gemini_key %}text-emerald-700{% else %}text-amber-700{% endif %}">
+          {% if has_gemini_key %}Configured (Active){% else %}Missing Key (Fallback){% endif %}
+        </span>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <span class="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Storage Backend</span>
+        <span class="font-bold text-gray-800 text-sm mt-0.5 block capitalize">{{ storage_backend }}</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Database Connection Diagnostic Card -->
   <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
     <div class="flex items-center justify-between border-b border-gray-100 pb-4">
       <div>
         <h2 class="text-base font-bold text-[#111111]">Database Architecture Health</h2>
-        <p class="text-xs text-gray-400">MySQL 8.0+ Primary with Zero-Downtime SQLite Fallback</p>
+        <p class="text-xs text-gray-400">PostgreSQL / MySQL Primary with Zero-Downtime SQLite Fallback</p>
       </div>
       <span class="px-3 py-1 rounded-full text-xs font-bold {% if db_status.is_fallback %}bg-amber-100 text-amber-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
-        {% if db_status.is_fallback %}SQLite Fallback Active{% else %}MySQL Connected{% endif %}
+        {% if db_status.is_fallback %}SQLite Local Fallback{% else %}Remote Database Connected{% endif %}
       </span>
     </div>
 
@@ -41,56 +78,68 @@
   <!-- Model Configuration -->
   <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
     <div class="border-b border-gray-100 pb-4">
-      <h2 class="text-base font-bold text-[#111111]">AI & Vision Model Stack</h2>
-      <p class="text-xs text-gray-400">Local CPU-friendly deep learning engines</p>
+      <h2 class="text-base font-bold text-[#111111]">AI & Vision Intelligence Stack</h2>
+      <p class="text-xs text-gray-400">Active object detection and cross-modal embedding models</p>
     </div>
 
     <div class="space-y-3">
       <div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-gray-50">
         <div class="flex items-center space-x-3">
           <div class="w-8 h-8 rounded-lg bg-[#111111] text-white flex items-center justify-center font-bold text-xs">
-            Y8
+            {% if ai_mode == 'cloud' %}GM{% else %}Y8{% endif %}
           </div>
           <div>
-            <div class="text-xs font-bold text-gray-800">YOLOv8n (Ultralytics)</div>
-            <div class="text-[10px] text-gray-500">80 COCO Classes &bull; Bounding Box Coordinates &bull; Confidence Tensors</div>
+            <div class="text-xs font-bold text-gray-800">{{ detector_model }}</div>
+            <div class="text-[10px] text-gray-500">
+              {% if ai_mode == 'cloud' %}
+              Zero-bundle Google Gemini Vision &bull; Bounding Boxes &bull; Scene & Context Understanding
+              {% else %}
+              80 COCO Classes &bull; Local CPU-friendly YOLOv8n &bull; Pillow Bounding Box Renderer
+              {% endif %}
+            </div>
           </div>
         </div>
-        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active</span>
+        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active Detector</span>
       </div>
 
       <div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-gray-50">
         <div class="flex items-center space-x-3">
           <div class="w-8 h-8 rounded-lg bg-[#C62828] text-white flex items-center justify-center font-bold text-xs">
-            CL
+            EM
           </div>
           <div>
-            <div class="text-xs font-bold text-gray-800">CLIP ViT-B-32 (OpenCLIP)</div>
-            <div class="text-[10px] text-gray-500">512-dim Normalized Latent Space &bull; Text-to-Image Cross-Modal &bull; Zero-Shot</div>
+            <div class="text-xs font-bold text-gray-800">{{ embedder_model }}</div>
+            <div class="text-[10px] text-gray-500">
+              Normalized Vector Embeddings &bull; Semantic Natural Language Search &bull; JSON Stored
+            </div>
           </div>
         </div>
-        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active</span>
+        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active Embedder</span>
       </div>
     </div>
   </div>
 
-  <!-- Ingestion Limits -->
+  <!-- Ingestion Constraints & Optimization -->
   <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-3">
     <div class="border-b border-gray-100 pb-3">
-      <h2 class="text-base font-bold text-[#111111]">Ingestion Constraints</h2>
+      <h2 class="text-base font-bold text-[#111111]">Ingestion & Upload Optimization</h2>
+      <p class="text-xs text-gray-400">Serverless-optimized client compression and security controls</p>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
       <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
-        <span class="text-[10px] text-gray-400 block font-bold uppercase">Max File Size</span>
-        <span class="font-bold text-gray-800 text-sm">15 MB</span>
+        <span class="text-[10px] text-gray-400 block font-bold uppercase">Client Compression</span>
+        <span class="font-bold text-gray-800 text-sm">Max 1600px Canvas</span>
+        <span class="text-[10px] text-gray-500 block mt-0.5">&lt; 4.5 MB request ceiling</span>
       </div>
       <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
         <span class="text-[10px] text-gray-400 block font-bold uppercase">Permitted Formats</span>
         <span class="font-bold text-gray-800 text-sm">JPG, PNG, WEBP</span>
+        <span class="text-[10px] text-gray-500 block mt-0.5">JPEG 0.85 re-encoded</span>
       </div>
       <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
         <span class="text-[10px] text-gray-400 block font-bold uppercase">Duplicate Detection</span>
-        <span class="font-bold text-gray-800 text-sm">SHA-256 Unique Hash</span>
+        <span class="font-bold text-gray-800 text-sm">SHA-256 Hash</span>
+        <span class="text-[10px] text-gray-500 block mt-0.5">Prevents double-storage</span>
       </div>
     </div>
   </div>

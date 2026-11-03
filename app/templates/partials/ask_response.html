@@ -35,7 +35,7 @@
         {% for img in result.images %}
           <a href="/images/{{ img.id }}" class="group block rounded-lg border border-gray-200 overflow-hidden bg-gray-50 hover:shadow-md transition">
             <div class="aspect-square bg-gray-100 overflow-hidden relative">
-              <img src="/{{ img.stored_path }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition">
+              <img src="{{ img.image_url or (img.stored_path | media_url) }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition">
               <span class="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded">
                 {{ img.category }}
               </span>

@@ -132,7 +132,7 @@
         {% for img in recent_images %}
           <a href="/images/{{ img.id }}" class="group block rounded-lg border border-[#E5E5E5] overflow-hidden hover:shadow-md transition">
             <div class="aspect-square bg-gray-100 overflow-hidden relative">
-              <img src="/{{ img.stored_path }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+              <img src="{{ img.stored_path | media_url }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
               <span class="absolute bottom-1.5 left-1.5 bg-black/70 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded">
                 {{ img.category }}
               </span>

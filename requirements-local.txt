@@ -1,0 +1,10 @@
+# Local Offline Deep Learning Stack for PixelMind (CPU-friendly)
+# Install in addition to requirements.txt when running locally without external cloud APIs:
+# pip install -r requirements-local.txt
+
+torch>=2.2.0
+torchvision>=0.17.0
+ultralytics>=8.2.0
+open-clip-torch>=2.24.0
+opencv-python-headless>=4.9.0
+pytest>=8.2.0

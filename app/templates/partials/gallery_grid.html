@@ -6,7 +6,7 @@
         <!-- Thumbnail -->
         <a href="/images/{{ img.id }}" class="aspect-4/3 bg-gray-100 overflow-hidden relative block">
           <img 
-            src="/{{ img.stored_path }}" 
+            src="{{ img.stored_path | media_url }}" 
             alt="{{ img.filename }}" 
             class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
             loading="lazy"

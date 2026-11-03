@@ -96,15 +96,21 @@ def compute_scene_similarity(
 
 
 def compute_overall_similarity(
-    query_vec: Optional[np.ndarray],
-    target_vec: Optional[np.ndarray],
+    query_vec: Optional[Any],
+    target_vec: Optional[Any],
 ) -> float:
-    """Calculate overall semantic visual similarity using CLIP latent cosine similarity."""
+    """Calculate overall semantic visual similarity using normalized cosine similarity."""
     if query_vec is None or target_vec is None:
         return 0.0
     try:
-        dot = float(np.dot(query_vec, target_vec))
-        # Rescale [-1, 1] to [0, 1]
+        a = np.asarray(query_vec, dtype=np.float32)
+        b = np.asarray(target_vec, dtype=np.float32)
+        norm_a = float(np.linalg.norm(a))
+        norm_b = float(np.linalg.norm(b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        dot = float(np.dot(a, b) / (norm_a * norm_b))
+        # Rescale [-1, 1] to [0.0, 1.0]
         return round(float(max(0.0, min(1.0, (dot + 1.0) / 2.0))), 3)
     except Exception:
         return 0.0

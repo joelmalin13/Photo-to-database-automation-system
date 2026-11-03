@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 import numpy as np
 from sqlalchemy.orm import Session
 
-from core.embedder import ClipEmbedder
+from core.embedder import get_embedder
 from core.query_parser import QueryResult, parse_and_execute_query
 from db.crud import get_all_embeddings, get_image_by_id
 
@@ -23,7 +23,7 @@ class SearchService:
 
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.embedder = ClipEmbedder.get_instance()
+        self.embedder = get_embedder()
 
     def natural_language_search(
         self,

@@ -1,12 +1,13 @@
 """Image ingestion, visual feature extraction, and lifecycle service for PixelMind.
 
-Coordinates the end-to-end processing pipeline:
+Coordinates the end-to-end processing pipeline in both Cloud and Local modes:
 - SHA-256 duplicate detection
-- YOLOv8n object detection & bounding box rendering
-- Image DNA generation (K-Means colors, pHash, CLIP embedding)
+- Storage persistence (LocalStorage / Supabase Cloud Storage)
+- Object detection & bounding box rendering (Gemini 2.5 Flash / YOLOv8n)
+- Image DNA generation (Pure NumPy K-Means colors, pHash, JSON embedding)
 - Scene & environment classification
 - Statistical anomaly detection
-- Relational persistence in MySQL / SQLite
+- Relational persistence in PostgreSQL / MySQL / SQLite
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ from PIL import Image as PILImage
 from sqlalchemy.orm import Session
 
 from config.settings import (
+    AI_MODE,
     ALLOWED_EXTENSIONS,
     CONFIDENCE_THRESHOLD,
     MAX_FILE_SIZE_BYTES,
-    UPLOAD_DIR,
     logger,
 )
 from core.anomaly import check_image_anomaly
@@ -35,9 +36,10 @@ from core.dna import (
     create_composition_summary,
     extract_dominant_colors,
 )
-from core.embedder import ClipEmbedder
-from core.exceptions import DuplicateImageError, InvalidImageError
+from core.embedder import get_embedder
+from core.exceptions import DetectionError, DuplicateImageError, InvalidImageError
 from core.scene import classify_scene
+from core.storage import get_storage
 from db.crud import (
     add_detections,
     create_image,
@@ -56,6 +58,7 @@ class ImageService:
 
     def __init__(self, db: Session) -> None:
         self.db = db
+        self.storage = get_storage()
 
     def validate_file(self, filename: str, content_length: int, file_bytes: bytes) -> None:
         """Validate file extension, size constraints, and image integrity via Pillow."""
@@ -66,7 +69,8 @@ class ImageService:
             )
 
         if content_length > MAX_FILE_SIZE_BYTES or len(file_bytes) > MAX_FILE_SIZE_BYTES:
-            raise InvalidImageError("File size exceeds 15 MB limit.")
+            max_mb = MAX_FILE_SIZE_BYTES // (1024 * 1024)
+            raise InvalidImageError(f"File size exceeds the {max_mb} MB limit for this environment.")
 
         if len(file_bytes) == 0:
             raise InvalidImageError("Uploaded file is empty.")
@@ -100,40 +104,92 @@ class ImageService:
             )
             return existing, True, f"Duplicate image already exists in database (ID: #{existing.id})."
 
-        # 2. Save original image with UUID prefix
-        safe_filename = f"{uuid.uuid4().hex[:10]}_{Path(filename).name}"
-        saved_path = UPLOAD_DIR / safe_filename
-        saved_path.write_bytes(file_bytes)
+        # 2. Persist original image to configured storage (Local or Supabase)
+        stored_path, access_url = self.storage.save_file(file_bytes, filename, is_annotated=False)
 
-        # 3. Read PIL image for dimensions and DNA
+        # 3. Read PIL image for dimensions and Image DNA
         with PILImage.open(io.BytesIO(file_bytes)) as pil_img:
             width, height = pil_img.size
             phash = compute_phash(pil_img)
             dominant_colors = extract_dominant_colors(pil_img, num_colors=5)
 
-        # 4. Object Detection (YOLOv8n)
-        detector = get_detector("yolo")
-        detection_res = detector.detect(
-            saved_path,
-            confidence_threshold=confidence_threshold,
-            save_annotated=True,
+        # 4. Object Detection & Visual Analysis (Gemini in Cloud / YOLO in Local)
+        detector = get_detector()
+        detection_failed = False
+        error_message = ""
+
+        try:
+            detection_res = detector.detect(
+                file_bytes,
+                confidence_threshold=confidence_threshold,
+                save_annotated=True,
+            )
+        except DetectionError as det_err:
+            logger.warning("Object detection error on %s: %s", filename, det_err)
+            detection_failed = True
+            error_message = str(det_err)
+        except Exception as exc:
+            logger.error("Unexpected detection failure on %s: %s", filename, exc)
+            detection_failed = True
+            error_message = f"Inference error: {exc}"
+
+        # 5. Handle Failed Ingestion gracefully
+        if detection_failed:
+            img = create_image(
+                session=self.db,
+                filename=filename,
+                stored_path=access_url,
+                annotated_path=None,
+                sha256=sha256_hash,
+                phash=phash,
+                width=width,
+                height=height,
+                category="Uncategorized",
+                status="failed",
+                caption=f"Failed: {error_message}",
+            )
+            log_step(
+                self.db,
+                img.id,
+                "detection",
+                status="failed",
+                message=error_message,
+                execution_time_ms=int((time.time() - start_time) * 1000),
+            )
+            return img, False, f"Image uploaded but analysis failed ({error_message}). Click Retry to re-process."
+
+        # 6. Save annotated image to storage if rendered
+        annotated_url = None
+        if getattr(detection_res, "annotated_bytes", None):
+            _, annotated_url = self.storage.save_file(
+                detection_res.annotated_bytes, f"annotated_{filename}", is_annotated=True
+            )
+        elif detection_res.annotated_path:
+            annotated_url = detection_res.annotated_path
+
+        # 7. Semantic Category & Scene Resolution
+        embedder = get_embedder()
+        category = detection_res.category or determine_image_category(detection_res.items)
+        scene = detection_res.scene or "general"
+        environment = detection_res.environment or "outdoor"
+        caption = detection_res.caption
+
+        # 8. Embedding Generation (JSON list of floats)
+        object_labels = [item.label for item in detection_res.items]
+        embedding_vec = embedder.embed_image_metadata(
+            image_input=file_bytes,
+            caption=caption,
+            objects=object_labels,
+            scene=scene,
+            environment=environment,
         )
 
-        # 5. Embedding Generation (CLIP)
-        embedder = ClipEmbedder.get_instance()
-        embedding_vec = embedder.embed_image(saved_path)
-        embedding_blob = embedding_vec.tobytes() if embedding_vec is not None else None
-
-        # 6. Automatic Categorization & Scene Understanding
-        category = determine_image_category(detection_res.items, saved_path, embedder)
-        scene, environment = classify_scene(saved_path, embedder, detection_res.items)
-
-        # 7. Persist Primary Image Entity
+        # 9. Persist Primary Image Entity
         img = create_image(
             session=self.db,
             filename=filename,
-            stored_path=str(saved_path),
-            annotated_path=detection_res.annotated_path,
+            stored_path=access_url,
+            annotated_path=annotated_url,
             sha256=sha256_hash,
             phash=phash,
             width=width,
@@ -141,9 +197,11 @@ class ImageService:
             category=category,
             scene=scene,
             environment=environment,
+            status="done",
+            caption=caption,
         )
 
-        # 8. Persist Detections
+        # 10. Persist Detections
         detections_payload = [
             {
                 "label": item.label,
@@ -156,17 +214,17 @@ class ImageService:
         ]
         add_detections(self.db, img.id, detections_payload)
 
-        # 9. Persist Image DNA
+        # 11. Persist Image DNA
         composition = create_composition_summary(width, height, detection_res.items)
         set_image_dna(
             session=self.db,
             image_id=img.id,
             dominant_colors=dominant_colors,
-            embedding_blob=embedding_blob,
+            embedding_vector=embedding_vec,
             composition=composition,
         )
 
-        # 10. Statistical Anomaly Flagging
+        # 12. Statistical Anomaly Flagging
         anomaly_check = check_image_anomaly(detection_res.items)
         if anomaly_check:
             reason, score = anomaly_check
@@ -178,12 +236,65 @@ class ImageService:
             img.id,
             "full_ingestion_pipeline",
             status="success",
-            message=f"Detected {detection_res.total_count} objects in {len(detection_res.items)} classes.",
+            message=f"Mode: {AI_MODE}. Detected {detection_res.total_count} objects in {len(detection_res.items)} classes.",
             execution_time_ms=duration_ms,
         )
 
         logger.info("Successfully ingested image #%d: %s (%d ms)", img.id, filename, duration_ms)
         return img, False, "Image processed and stored successfully."
+
+    def reprocess_image(self, image_id: int) -> Tuple[Optional[Image], str]:
+        """Retry processing for a failed or unanalyzed image."""
+        img = self.get_image(image_id)
+        if not img:
+            return None, f"Image #{image_id} not found."
+
+        try:
+            file_bytes = self.storage.read_bytes(img.stored_path)
+        except Exception as exc:
+            return img, f"Could not retrieve stored image bytes: {exc}"
+
+        detector = get_detector()
+        try:
+            res = detector.detect(file_bytes, confidence_threshold=CONFIDENCE_THRESHOLD, save_annotated=True)
+        except Exception as exc:
+            return img, f"Retry analysis failed: {exc}"
+
+        # Update annotated image
+        if getattr(res, "annotated_bytes", None):
+            _, ann_url = self.storage.save_file(res.annotated_bytes, f"annotated_{img.filename}", is_annotated=True)
+            img.annotated_path = ann_url
+
+        embedder = get_embedder()
+        img.category = res.category or determine_image_category(res.items)
+        img.scene = res.scene or "general"
+        img.environment = res.environment or "outdoor"
+        img.caption = res.caption
+        img.status = "done"
+
+        # Update detections
+        detections_payload = [
+            {"label": it.label, "category": it.category, "count": it.count, "avg_confidence": it.avg_confidence, "bboxes": it.bboxes}
+            for it in res.items
+        ]
+        add_detections(self.db, img.id, detections_payload)
+
+        # Update DNA
+        composition = create_composition_summary(img.width, img.height, res.items)
+        emb_vec = embedder.embed_image_metadata(
+            image_input=file_bytes,
+            caption=res.caption,
+            objects=[it.label for it in res.items],
+            scene=img.scene,
+            environment=img.environment,
+        )
+        with PILImage.open(io.BytesIO(file_bytes)) as p_img:
+            colors = extract_dominant_colors(p_img, num_colors=5)
+
+        set_image_dna(self.db, img.id, colors, emb_vec, composition)
+        self.db.commit()
+
+        return img, "Image re-analyzed successfully."
 
     def get_image(self, image_id: int) -> Optional[Image]:
         """Fetch single image entity by ID."""

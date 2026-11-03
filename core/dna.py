@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 from typing import Any, Dict, List, Tuple
-import cv2
 import numpy as np
 from PIL import Image
 
@@ -52,33 +51,72 @@ def _rgb_to_hex(r: int, g: int, b: int) -> str:
     return f"#{r:02X}{g:02X}{b:02X}"
 
 
+def _kmeans_numpy(
+    pixels: np.ndarray, k: int, max_iters: int = 12
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Pure NumPy K-Means clustering algorithm with deterministic seed."""
+    n_samples = len(pixels)
+    k = min(k, n_samples)
+    if k <= 1:
+        return np.zeros(n_samples, dtype=int), np.mean(pixels, axis=0, keepdims=True)
+
+    # Deterministic k-means++ initialization
+    centers = [pixels[0]]
+    for _ in range(1, k):
+        dist_sq = np.min(
+            [np.sum((pixels - c) ** 2, axis=1) for c in centers], axis=0
+        )
+        total_d = np.sum(dist_sq)
+        if total_d == 0:
+            centers.append(pixels[len(centers) % n_samples])
+        else:
+            probs = dist_sq / total_d
+            cum_probs = np.cumsum(probs)
+            r = 0.5
+            idx = int(np.searchsorted(cum_probs, r))
+            centers.append(pixels[min(idx, n_samples - 1)])
+
+    centers_arr = np.array(centers, dtype=np.float32)
+
+    for _ in range(max_iters):
+        dists = np.linalg.norm(pixels[:, None, :] - centers_arr[None, :, :], axis=2)
+        labels = np.argmin(dists, axis=1)
+        new_centers = np.array(
+            [
+                pixels[labels == i].mean(axis=0) if np.any(labels == i) else centers_arr[i]
+                for i in range(k)
+            ],
+            dtype=np.float32,
+        )
+        if np.allclose(centers_arr, new_centers, atol=0.5):
+            break
+        centers_arr = new_centers
+
+    return labels, centers_arr
+
+
 def extract_dominant_colors(
     pil_image: Image.Image, num_colors: int = 5
 ) -> List[Dict[str, Any]]:
-    """Extract top dominant colors using K-Means clustering on downsampled RGB pixels."""
-    # Downsample for sub-50ms execution speed
-    thumb = pil_image.convert("RGB").resize((120, 120), Image.Resampling.BILINEAR)
+    """Extract top dominant colors using pure NumPy K-Means clustering."""
+    thumb = pil_image.convert("RGB").resize((64, 64), Image.Resampling.BILINEAR)
     img_data = np.array(thumb, dtype=np.float32)
     pixels = img_data.reshape(-1, 3)
 
-    # OpenCV K-Means parameters
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 15, 0.2)
     k = min(num_colors, len(pixels))
 
     try:
-        _, labels, centers = cv2.kmeans(
-            pixels, k, None, criteria, 5, cv2.KMEANS_PP_CENTERS
-        )
-        labels = labels.flatten()
+        labels, centers = _kmeans_numpy(pixels, k, max_iters=10)
         total_pixels = len(labels)
 
-        # Count cluster assignments
         counts = np.bincount(labels, minlength=k)
         sorted_indices = np.argsort(counts)[::-1]
 
         results: List[Dict[str, Any]] = []
         for idx in sorted_indices[:num_colors]:
-            r, g, b = int(round(centers[idx][0])), int(round(centers[idx][1])), int(round(centers[idx][2]))
+            r = int(np.clip(round(float(centers[idx][0])), 0, 255))
+            g = int(np.clip(round(float(centers[idx][1])), 0, 255))
+            b = int(np.clip(round(float(centers[idx][2])), 0, 255))
             pct = round((float(counts[idx]) / total_pixels) * 100.0, 1)
             results.append(
                 {
@@ -90,7 +128,6 @@ def extract_dominant_colors(
         return results
 
     except Exception:
-        # Fallback to simple mean if clustering fails
         mean_rgb = [int(p) for p in np.mean(pixels, axis=0)]
         return [
             {

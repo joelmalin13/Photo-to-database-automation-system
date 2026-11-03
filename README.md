@@ -2,293 +2,273 @@
 
 > *"Every Image Has Data. Make It Searchable."*
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Serverless%20Ready-black.svg?logo=vercel)](https://vercel.com/)
+[![Python 3.12](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![YOLOv8n](https://img.shields.io/badge/YOLOv8n-Ultralytics-orange.svg)](https://docs.ultralytics.com/)
-[![OpenCLIP](https://img.shields.io/badge/OpenCLIP-ViT--B--32-purple.svg)](https://github.com/mlfoundations/open_clip)
-[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-red.svg)](https://www.sqlalchemy.org/)
-[![Database](https://img.shields.io/badge/MySQL%20%7C%20SQLite%20Fallback-active-brightgreen.svg)](https://www.mysql.com/)
-
-**PixelMind** is an enterprise-grade visual intelligence platform that ingests unstructured photographs, detects objects, understands scene composition, extracts an authoritative "Image DNA" visual fingerprint, stores everything as structured database records, and renders it instantly searchable via natural language sentences, visual similarity, and interactive conversational queries.
+[![Google Gemini](https://img.shields.io/badge/Gemini%202.5%20Flash-Vision%20%26%20Embeddings-4285F4.svg?logo=google)](https://aistudio.google.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%26%20Storage-3ECF8E.svg?logo=supabase)](https://supabase.com/)
+[![Bundle Size](https://img.shields.io/badge/Serverless%20Bundle-167%20MB%20(%3C%20400%20MB)-brightgreen.svg)]()
 
 ---
 
-## Architecture Overview
+## Live Demo & Public Link
+
+- **Production Vercel URL:** `https://your-pixelmind-app.vercel.app` *(Deploy below)*
+- **Live Tunnel (Temporary):** `https://basket-significantly-acknowledged-outcomes.trycloudflare.com`
+- **Health Telemetry:** `GET /health`
+
+---
+
+## Overview
+
+**PixelMind** is an enterprise visual intelligence platform that ingests unstructured photographs, automatically detects objects, classifies scene environments, computes an authoritative **Image DNA** visual fingerprint, persists structured records across hosted relational databases, and renders them instantly searchable via **natural language sentences**, **semantic reverse visual similarity**, and **interactive conversational queries**.
+
+Designed from the ground up with **Dual-Mode AI Architecture**, PixelMind operates seamlessly in two environments:
+1. **Cloud Serverless Mode (Vercel)**: Zero heavy deep-learning bundle (< 170 MB uncompressed, strictly under Vercel's 500 MB ceiling). Uses **Google Gemini 2.5 Flash** for single-call structured vision and **text-embedding-004**, **Supabase Storage** for assets, and **Supabase / Neon PostgreSQL** (or MySQL) via SQLAlchemy `NullPool`.
+2. **Local Workstation Mode**: Offline CPU-friendly **YOLOv8n** (Ultralytics) + **OpenCLIP ViT-B-32**, pure Pillow / NumPy color clustering, and local filesystem / SQLite / MySQL storage.
+
+---
+
+## Dual-Mode System Architecture
 
 ```mermaid
 flowchart TD
-    Client["Browser / HTMX + Alpine.js + Tailwind"] -->|HTTP / REST| API["FastAPI Application (app.main)"]
-    API --> ServiceLayer["Service Layer (app/services)"]
-    
-    subgraph ServiceLayer ["Service Layer"]
-        ImageSvc["ImageService"]
-        SearchSvc["SearchService"]
-        DnaSvc["DnaService"]
-        AnalyticsSvc["AnalyticsService"]
+    subgraph Client ["Client Browser (Tailwind + Alpine.js + HTMX)"]
+        UI["Upload / Search / Gallery / DNA"]
+        Canvas["Offscreen Canvas Resizer (Max 1600px, JPEG 0.85)"]
+        UI --> Canvas
     end
-    
-    subgraph AI_Engines ["Computer Vision & AI Engines"]
-        YOLO["YOLOv8n Detector (Object Detection)"]
+
+    Canvas -->|Payload < 800 KB| Router{"Vercel / Local Host"}
+
+    subgraph Serverless ["FastAPI Serverless Application (index.py)"]
+        App["FastAPI Entrypoint (app.main)"]
+        StorageFactory["Storage Factory (LocalStorage vs SupabaseStorage)"]
+        DetectorFactory["Detector Factory (LocalDetector vs CloudDetector)"]
+        EmbedderFactory["Embedder Factory (LocalEmbedder vs CloudEmbedder)"]
+        DBPool["SQLAlchemy 2.0 (NullPool Serverless-Safe)"]
+    end
+
+    Router --> App
+    App --> StorageFactory
+    App --> DetectorFactory
+    App --> EmbedderFactory
+    App --> DBPool
+
+    subgraph CloudStack ["Cloud Mode (AI_MODE=cloud)"]
+        Gemini["Google Gemini 2.5 Flash (Vision + JSON Schema)"]
+        GeminiEmbed["Gemini text-embedding-004 (768-dim Embeddings)"]
+        SupaStore[("Supabase Storage REST API")]
+        SupaDB[("Supabase / Neon PostgreSQL (psycopg)")]
+    end
+
+    subgraph LocalStack ["Local Mode (AI_MODE=local)"]
+        YOLO["YOLOv8n (80 COCO Classes, CPU)"]
         CLIP["OpenCLIP ViT-B-32 (512-dim Latent Vectors)"]
-        KMeans["OpenCV K-Means (Dominant Color Palette)"]
-        PerceptualHash["dHash 64-bit + SHA-256 Hashes"]
-        QueryParser["Rule-Based Parameterized Query Parser"]
+        LocalDisk[("Local Filesystem (uploads/ / data/)")]
+        LocalDB[("MySQL 8.0+ / SQLite Fallback")]
     end
 
-    ImageSvc --> YOLO
-    ImageSvc --> CLIP
-    ImageSvc --> KMeans
-    ImageSvc --> PerceptualHash
-    SearchSvc --> CLIP
-    SearchSvc --> QueryParser
-    DnaSvc --> CLIP
-
-    ServiceLayer --> CRUD["db.crud (Parameterized Queries)"]
-    CRUD --> EngineRouter{"Resilient Engine"}
-    EngineRouter -->|Default| MySQL[("MySQL 8.0+ Database (pixelmind)")]
-    EngineRouter -->|Fallback| SQLite[("Local SQLite Database (data/pixelmind.db)")]
+    DetectorFactory -->|Cloud| Gemini
+    DetectorFactory -->|Local| YOLO
+    EmbedderFactory -->|Cloud| GeminiEmbed
+    EmbedderFactory -->|Local| CLIP
+    StorageFactory -->|Cloud| SupaStore
+    StorageFactory -->|Local| LocalDisk
+    DBPool -->|Cloud| SupaDB
+    DBPool -->|Local| LocalDB
 ```
 
 ---
 
-## Core Capabilities
+## Deploying on Vercel (Step-by-Step)
 
-### 1. Object Detection (YOLOv8n)
-- Rapid CPU-optimized real-time detection across 80 COCO classes.
-- Stores detected label, count, bounding boxes `[x1, y1, x2, y2]`, and confidence scores.
-- Automatically saves annotated images with custom colored bounding boxes and labels into `/data/annotated`.
+Deploying PixelMind to Vercel takes approximately 5 minutes.
 
-### 2. Automatic Categorization
-- Maps detected labels to 9 canonical categories via `config/categories.json`:
-  - `Nature`, `Animals`, `Vehicles`, `Technology`, `Food`, `Architecture`, `Human activities`, `Sports`, `Electronics`
-- Resolves image-level category through object distribution weighting, with zero-shot OpenCLIP as an automated tie-breaker when detections are ambiguous or absent.
+### Step 1: Provision Supabase (Database & Storage)
 
-### 3. Image DNA Visual Fingerprint
-- **Dominant Colors**: Extracts top 5 dominant colors with HEX, RGB, and pixel area percentages using OpenCV K-Means clustering.
-- **Hashes**: Cryptographic SHA-256 for instant duplicate blocking, plus 64-bit perceptual difference hash (`dHash`) for visual similarity.
-- **Composition Summary**: Aspect ratio, orientation (landscape/portrait/square), object density, and category breakdown.
-- **Vector Embedding**: 512-dimensional normalized OpenCLIP `ViT-B-32` latent embedding blob.
+1. Navigate to [Supabase](https://supabase.com/) and create a new project.
+2. Under **Project Settings &rarr; Database &rarr; Connection String &rarr; URI**:
+   - Copy the PostgreSQL URI.
+   - Replace the driver prefix with `postgresql+psycopg://` (e.g. `postgresql+psycopg://postgres.YOUR_PROJECT_ID:YOUR_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres`).
+3. Under **Storage**:
+   - Click **New Bucket**.
+   - Name it `photos` (or any custom name).
+   - Toggle **Public bucket** ON so uploaded and annotated images can be viewed publicly.
+4. Under **Project Settings &rarr; API**:
+   - Copy your **Project URL** (`https://xyzcompany.supabase.co`).
+   - Copy your **service_role secret key** (needed for authorized serverless image uploads).
 
-### 4. Natural Language Image Search
-- Natural language query input (e.g. *"a red car parked beside a tree"*).
-- Combines OpenCLIP text-to-image cosine similarity with detected object label matches for high-precision ranking.
-- Real-time debounced live search powered by HTMX.
+### Step 2: Get a Free Google Gemini API Key
 
-### 5. Ask Your Images (Rule-Based Visual Q&A)
-Converts natural language questions into safe, parameterized SQL queries without requiring an external LLM:
-- *"How many cars have been detected across all images?"*
-- *"Find images containing dogs"*
-- *"Show images containing both people and motorcycles"*
-- *"Which image contains the maximum number of objects?"*
-- *"Show all outdoor images containing at least two vehicles and one person"*
-- *"Find all images containing electronic devices"*
+1. Go to [Google AI Studio](https://aistudio.google.com/).
+2. Click **Create API Key**.
+3. Copy the generated key (`AIza...`).
 
-### 6. Visual Analytics Dashboard
-- Key Performance Indicators (Total Images, Detected Objects, Storage Volume, Anomaly Flags).
-- Protected empty states (`"No data yet"`) when database has zero records.
-- Five Chart.js visualizations:
-  1. Category Distribution (Doughnut)
-  2. Top Detected Objects (Bar)
-  3. Scene Classification (Horizontal Bar)
-  4. Environment Breakdown: Indoor vs. Outdoor (Polar/Pie)
-  5. Monthly Ingestion Velocity (Smooth Line)
+### Step 3: Deploy to Vercel
 
-### 7. Reverse Visual Search & Anomaly Detection
-- Reverse image search supporting 4 comparison modes:
-  - **Overall**: CLIP latent cosine similarity
-  - **Object**: Generalized Jaccard index over labels and counts
-  - **Color**: Weighted Euclidean RGB palette distance
-  - **Scene**: Scene label and environment agreement
-- Automated statistical anomaly flagging identifying unusual object counts or incongruous category pairings.
+1. Push this repository to GitHub or GitLab.
+2. In the [Vercel Dashboard](https://vercel.com/new), click **Import Project** and select this repository.
+3. Keep default settings:
+   - **Framework Preset**: `Other`
+   - **Root Directory**: `./`
+4. Expand **Environment Variables** and configure the following:
 
----
+| Variable Name | Required | Example / Description |
+|:---|:---:|:---|
+| `AI_MODE` | **Yes** | `cloud` (forces zero-torch Google Gemini inference) |
+| `DB_URL` | **Yes** | `postgresql+psycopg://postgres:pass@host:5432/postgres` |
+| `GEMINI_API_KEY` | **Yes** | `AIzaSy...` (Google Gemini API key) |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` (default) |
+| `GEMINI_EMBED_MODEL` | No | `text-embedding-004` (default) |
+| `STORAGE_BACKEND` | **Yes** | `supabase` |
+| `SUPABASE_URL` | **Yes** | `https://your-id.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | **Yes** | Your Supabase service role secret key |
+| `SUPABASE_BUCKET` | **Yes** | `photos` |
 
-## Design System
+5. Click **Deploy**. Vercel will install the lightweight dependencies from `requirements.txt` (~167 MB uncompressed) and deploy the ASGI FastAPI application via `index.py`.
 
-- **Clean SaaS Aesthetics**: Crisp pure white background (`#FFFFFF`), near-black text (`#1F1F1F`), neutral gray borders (`#E5E5E5`).
-- **Signature Gradient Banner**: Subtle top header gradient transitioning from deep charcoal (`#111111`) to primary red (`#C62828`).
-- **Zero Emojis**: Crisp SVG icons powered by Lucide throughout all templates and buttons.
-- **Responsive Layout**: Fixed collapsible sidebar on desktop, responsive slide-out navigation on mobile devices.
+### Step 4: Verify Deployment Health
 
----
-
-## Installation & Setup
-
-### Prerequisites
-- Python 3.11+
-- Git
-
-### 1. Clone & Set Up Environment
+Open your deployed URL in your browser or run:
 ```bash
-git clone <repo-url>
-cd "Photo to database automation system"
+curl https://your-pixelmind-app.vercel.app/health
+```
 
-# Create virtual environment
-python -m venv venv
+Expected JSON response:
+```json
+{
+  "status": "healthy",
+  "mode": "cloud",
+  "is_vercel": true,
+  "database": {
+    "engine_name": "PostgreSQL",
+    "connected": true,
+    "message": "Connected to remote database."
+  },
+  "storage": {
+    "backend": "supabase",
+    "status": "ready"
+  },
+  "ai": {
+    "detector": "gemini-2.5-flash",
+    "embedder": "text-embedding-004",
+    "gemini_configured": true,
+    "supabase_configured": true
+  }
+}
+```
 
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
+---
 
-# Install dependencies
+## Vercel Constraints & Architectural Solutions
+
+| Vercel Hard Constraint | Impact | PixelMind Engineering Solution |
+|:---|:---|:---|
+| **500 MB Uncompressed Bundle Limit** | `torch`, `ultralytics`, `open-clip-torch`, `opencv-python`, and `scipy` together exceed 2.5 GB. | Replaced heavy C++/PyTorch libraries in cloud mode with `google-genai` (< 12 MB) and pure Pillow / NumPy algorithms. Production bundle is **167.4 MB**. |
+| **4.5 MB Request / Response Limit** | High-resolution phone photos (8–20 MB) would fail with `413 Payload Too Large`. | Implemented offscreen browser HTML `<canvas>` downscaling (max 1600px longest dimension, JPEG 0.85 re-encoding) in `upload.html`. Typical upload size: 200–800 KB. |
+| **Read-Only & Ephemeral Filesystem** | Local SQLite `.db` and `/uploads` folders are lost upon function termination or read-only. | In cloud mode, all binary files stream directly to **Supabase Storage** and metadata is saved to **Supabase PostgreSQL**. Temporary files strictly use `/tmp`. |
+| **Serverless Execution Lifespan** | BackgroundTasks and daemon threads terminate when the response is returned. | Process each image inside its own HTTP request (`POST /api/images/single`) sequentially with browser-side queueing. |
+| **Database Connection Exhaustion** | Serverless function concurrency can quickly exceed database max connection limits. | Configured SQLAlchemy 2.0 with `NullPool` in serverless mode to open and close connections cleanly per invocation. |
+
+---
+
+## Local Development & Offline Mode
+
+To run PixelMind locally on your workstation using local CPU deep learning models:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/your-username/pixelmind.git
+cd pixelmind
+
+# 2. Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install production and local deep-learning dependencies
 pip install -r requirements.txt
+pip install -r requirements-local.txt
+
+# 4. Configure local environment
+cp .env.example .env
+# Edit .env: Set AI_MODE=local, DB_URL=sqlite:///data/pixelmind.db
+
+# 5. Start development server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```env
-# Database URL (Defaults to MySQL, automatically falls back to SQLite if unreachable)
-DATABASE_URL=mysql+mysqlconnector://root:password@localhost:3306/pixelmind
-
-# Confidence & Thresholds
-CONFIDENCE_THRESHOLD=0.25
-MAX_FILE_SIZE_MB=15
-
-# Optional: Google Gemini API Key (only used if external LLM fallback is requested)
-GEMINI_API_KEY=
-```
-
-### 3. Generate & Ingest Sample Images
-```bash
-# Generate 12 varied test images across canonical categories
-python sample_data/generate_sample_images.py
-
-# Ingest sample images into the database
-python sample_data/ingest_samples.py
-```
-
-### 4. Run the Application
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-Open your browser and navigate to:
-- **Web Application**: [http://localhost:8000](http://localhost:8000)
-- **Interactive API Documentation (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Alternative ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
----
-
-## Running Automated Tests
-
-Run the complete test suite with verbose output:
-```bash
-python -m pytest tests/ -v
-```
-
-The test suite covers:
-- `tests/test_categorizer.py`: Canonical label mapping, frequency determination, and fallback rules.
-- `tests/test_dna.py`: SHA-256 duplicate hashing, perceptual dHash distance, K-Means dominant color extraction, and composition statistics.
-- `tests/test_query_parser.py`: All 6 required natural language benchmark queries and unrecognized fallback suggestions.
-- `tests/test_similarity.py`: Object Jaccard, Color Euclidean, Scene alignment, and CLIP latent cosine similarity.
-- `tests/test_crud.py`: Relational persistence, duplicate hash lookups, cascading deletions, and analytics summaries.
-- `tests/test_api.py`: All 8 HTML page views, upload endpoint, search endpoint, Q&A endpoint, and database health status.
+Visit `http://127.0.0.1:8000` in your web browser.
 
 ---
 
 ## REST API Reference
 
 | Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/images` | Upload and ingest one or multiple image files (multipart/form-data) |
-| `GET` | `/api/images` | Search, filter by category/env/label, sort, and paginate stored images |
-| `GET` | `/api/images/{id}` | Retrieve comprehensive image metadata, bounding boxes, and DNA |
-| `DELETE`| `/api/images/{id}` | Delete image and cascade-delete child detections, DNA, and anomaly records |
-| `POST` | `/api/search` | Semantic text-to-image search using natural language query |
-| `POST` | `/api/ask` | Natural language question answering about the image database |
-| `POST` | `/api/similar` | Reverse visual search matching an uploaded query image |
-| `GET` | `/api/analytics` | Aggregated metrics and distributions for Chart.js |
-| `GET` | `/api/status` | Runtime database connectivity and active model telemetry |
+|:---|:---|:---|
+| `GET` | `/health` | Runtime system telemetry, AI mode, DB connection health, and storage backend status (no secrets). |
+| `POST` | `/api/images/single` | Sequential single-image upload with browser canvas compression compatibility. |
+| `POST` | `/api/images` | Multi-image batch ingestion endpoint. |
+| `GET` | `/api/images` | Filter, search, and paginate stored images by label, category, environment, and date. |
+| `GET` | `/api/images/{id}` | Detailed image record with bounding boxes, dominant colors, and Image DNA. |
+| `POST` | `/api/images/{id}/retry` | Re-analyze a failed image with the active AI detector without re-uploading. |
+| `DELETE` | `/api/images/{id}` | Cascade-delete an image and its detections, DNA, and anomaly records. |
+| `POST` | `/api/search` | Natural language image search (e.g. `{"query": "a red car parked by a tree"}`). |
+| `POST` | `/api/ask` | "Ask Your Images" rule-based visual intelligence Q&A. |
+| `POST` | `/api/similar` | Reverse image similarity search across 4 modes (`overall`, `object`, `color`, `scene`). |
+| `GET` | `/api/analytics` | Aggregated visual metrics and KPI data for Chart.js dashboards. |
 
 ---
 
-## Project Structure
+## Automated Verification & Test Suite
 
-```
-Photo to database automation system/
-│
-├── app/
-│   ├── main.py                     # FastAPI application setup, lifecycle, and route mounts
-│   ├── dependencies.py             # Database session dependency injection
-│   ├── routers/
-│   │   ├── pages.py                # Server-rendered HTML routes and HTMX partials
-│   │   └── api.py                  # OpenAPI REST endpoints
-│   ├── services/
-│   │   ├── image_service.py        # End-to-end ingestion pipeline orchestrator
-│   │   ├── search_service.py       # Semantic text search and visual Q&A
-│   │   ├── dna_service.py          # Reverse visual similarity search
-│   │   └── analytics_service.py    # Metric aggregation for Chart.js
-│   ├── static/
-│   │   ├── css/app.css             # Custom utility styling and scrollbar rules
-│   │   └── js/app.js               # Alpine.js helpers and toast utilities
-│   └── templates/                  # Jinja2 HTML templates
-│       ├── base.html               # Sidebar layout, top banner, and navigation
-│       ├── dashboard.html          # KPI stat cards and visual analytics
-│       ├── upload.html             # Multi-file drag & drop portal
-│       ├── gallery.html            # Image grid with filter bar and pagination
-│       ├── image_detail.html       # Split view: original vs annotated, DNA card
-│       ├── search.html             # Natural language semantic search
-│       ├── ask.html                # "Ask Your Images" interactive terminal
-│       ├── similar.html            # Reverse visual similarity portal
-│       ├── analytics.html          # Deep Chart.js visual analytics
-│       ├── settings.html           # System diagnostics and connection telemetry
-│       └── partials/               # HTMX partial fragments
-│
-├── core/                           # Computer Vision & Intelligence Core
-│   ├── anomaly.py                  # Statistical outlier detection
-│   ├── categorizer.py              # Automatic category mapping & tie-breaker
-│   ├── detector_base.py            # Base detector abstract class & factory
-│   ├── dna.py                      # K-Means dominant colors, dHash, composition
-│   ├── embedder.py                 # OpenCLIP ViT-B-32 singleton vector embedder
-│   ├── exceptions.py               # Custom domain exception hierarchy
-│   ├── query_parser.py             # Rule-based natural language SQL query parser
-│   ├── scene.py                    # Scene and indoor/outdoor classifier
-│   ├── similarity.py               # 4-mode reverse similarity calculators
-│   └── yolo_detector.py            # YOLOv8n object detection and box renderer
-│
-├── database/
-│   └── schema.sql                  # MySQL 8.0+ DDL schema definition
-│
-├── db/
-│   ├── models.py                   # SQLAlchemy 2.0 ORM data models
-│   ├── session.py                  # Resilient database connection with SQLite fallback
-│   └── crud.py                     # Parameterized SQL queries and aggregations
-│
-├── config/
-│   ├── settings.py                 # Pydantic configuration & environment settings
-│   ├── categories.json             # 80 COCO to 9 canonical categories mapping
-│   └── scenes.json                 # Scene types and environment definitions
-│
-├── sample_data/
-│   ├── generate_sample_images.py   # Synthetic test image generator
-│   └── ingest_samples.py           # Database pre-population script
-│
-├── tests/                          # Automated Pytest suite (32 tests, 100% passing)
-│   ├── test_api.py
-│   ├── test_categorizer.py
-│   ├── test_crud.py
-│   ├── test_dna.py
-│   ├── test_query_parser.py
-│   └── test_similarity.py
-│
-├── requirements.txt                # Production dependencies
-└── README.md                       # System documentation
+Verify all 36 test cases and measure serverless bundle compliance:
+
+```bash
+# Run complete test suite (includes cloud mode zero-torch module isolation tests)
+python -m pytest tests/ -v
+
+# Run bundle size verification against Vercel 500 MB ceiling
+python scripts/check_bundle_size.py
 ```
 
----
+### Bundle Size Audit Output:
+```
+============================================================
+PIXELMIND VERCEL BUNDLE SIZE AUDIT
+============================================================
+PASS: No heavy deep-learning packages (torch, ultralytics, cv2) found.
+Package                        | Estimated Size 
+--------------------------------------------------
+fastapi                        |     1.59 MB
+uvicorn                        |     0.70 MB
+jinja2                         |     1.12 MB
+python-multipart               |     0.18 MB
+httpx                          |     0.71 MB
+python-dotenv                  |     0.21 MB
+python-dateutil                |     0.71 MB
+sqlalchemy                     |    18.39 MB
+psycopg                        |     1.71 MB
+pymysql                        |     0.32 MB
+mysql-connector-python         |    59.39 MB
+pydantic                       |     3.62 MB
+pydantic-settings              |     0.60 MB
+numpy                          |    51.20 MB
+pillow                         |    15.41 MB
+google-genai                   |    11.54 MB
+--------------------------------------------------
+Total Measured Bundle          |   167.40 MB
 
-## Limitations & Future Enhancements
+Audit Result:
+  Measured Size : 167.40 MB
+  Target Budget : 400.0 MB
+  Vercel Ceiling: 500.0 MB
 
-1. **Vector Index Acceleration**:
-   - Current similarity calculations run sub-100ms on CPU using NumPy vectorized cosine operations. For datasets exceeding 100,000 images, integrating an approximate nearest neighbor (ANN) index such as FAISS or pgvector/Milvus will preserve sub-10ms latency.
-2. **Video Stream Ingestion**:
-   - The current architecture processes static photographs. Extending the ingestion service to sample video keyframes using OpenCV would enable automated video visual intelligence indexing.
-3. **Multi-Model Ensembles**:
-   - Adding specialized face detection (RetinaFace) or OCR alongside object detection for composite multimodal documents.
+SUCCESS: Bundle size (167.40 MB) is well within Vercel's serverless limits!
+```
 
 ---
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License. Built with FastAPI, Tailwind CSS, Alpine.js, and Google Gemini.

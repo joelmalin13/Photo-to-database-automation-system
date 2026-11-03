@@ -16,6 +16,15 @@ from app.services.analytics_service import AnalyticsService
 from app.services.dna_service import DnaService
 from app.services.image_service import ImageService
 from app.services.search_service import SearchService
+from config.settings import (
+    AI_MODE,
+    GEMINI_API_KEY,
+    GEMINI_EMBED_MODEL,
+    GEMINI_MODEL,
+    IS_VERCEL,
+    STORAGE_BACKEND,
+    SUPABASE_URL,
+)
 from core.exceptions import DuplicateImageError, InvalidImageError
 from db.crud import delete_image
 from db.session import get_db_status
@@ -52,7 +61,7 @@ async def upload_images(
     confidence_threshold: float = Form(0.25),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Ingest image files, detect objects with YOLO, compute DNA, and persist records."""
+    """Ingest image files, detect objects, compute DNA, and persist records."""
     if not files:
         raise HTTPException(status_code=400, detail="No files provided for upload.")
 
@@ -85,6 +94,59 @@ async def upload_images(
         "processed_count": len(ingested_items),
         "images": ingested_items,
         "errors": errors,
+    }
+
+
+@router.post(
+    "/images/single",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and ingest a single photograph (Vercel-safe sequential upload)",
+)
+async def upload_single_image(
+    file: UploadFile = File(...),
+    confidence_threshold: float = Form(0.25),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Ingest a single photo, adhering to the 4.5 MB request limit and serverless timeout."""
+    service = ImageService(db)
+    try:
+        content = await file.read()
+        img, is_dup, msg = service.ingest_image(
+            filename=file.filename or "uploaded.jpg",
+            file_bytes=content,
+            confidence_threshold=confidence_threshold,
+        )
+        item_dict = img.to_dict()
+        item_dict["is_duplicate"] = is_dup
+        item_dict["message"] = msg
+        return {
+            "success": True,
+            "status": img.status,
+            "image": item_dict,
+        }
+    except InvalidImageError as err:
+        raise HTTPException(status_code=400, detail=err.message)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Processing failed: {exc}")
+
+
+@router.post(
+    "/images/{image_id}/retry",
+    summary="Retry AI processing for a failed or unanalyzed image",
+)
+def retry_image_endpoint(
+    image_id: int,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Re-analyze a failed image using the active AI detector and embedder."""
+    service = ImageService(db)
+    img, msg = service.reprocess_image(image_id)
+    if not img:
+        raise HTTPException(status_code=404, detail=msg)
+    return {
+        "success": img.status == "done",
+        "message": msg,
+        "image": img.to_dict(),
     }
 
 
@@ -160,7 +222,7 @@ def search_images_endpoint(
     payload: SearchRequest,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Search images using natural language queries powered by CLIP text-to-image similarity."""
+    """Search images using natural language queries powered by semantic text-to-image similarity."""
     service = SearchService(db)
     results = service.natural_language_search(query=payload.query, limit=payload.limit or 20)
     return {
@@ -239,10 +301,44 @@ def analytics_endpoint(db: Session = Depends(get_db)) -> Dict[str, Any]:
 )
 def status_endpoint() -> Dict[str, Any]:
     """Return runtime connection health and engine identity."""
+    db_stat = get_db_status()
     return {
-        "database": get_db_status(),
+        "database": db_stat,
+        "mode": AI_MODE,
+        "is_vercel": IS_VERCEL,
         "models": {
-            "object_detector": "YOLOv8n (Ultralytics)",
-            "embedder": "CLIP ViT-B-32",
+            "object_detector": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n (Ultralytics)",
+            "embedder": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",
+        },
+        "storage": {
+            "backend": STORAGE_BACKEND,
+        },
+        "gemini_configured": bool(GEMINI_API_KEY),
+        "supabase_configured": bool(SUPABASE_URL),
+    }
+
+
+@router.get(
+    "/health",
+    summary="Deployment health check",
+)
+def health_endpoint() -> Dict[str, Any]:
+    """Health check endpoint for monitoring, uptime verification, and deployment sanity."""
+    db_stat = get_db_status()
+    is_healthy = db_stat.get("connected", False)
+    return {
+        "status": "healthy" if is_healthy else "degraded",
+        "mode": AI_MODE,
+        "is_vercel": IS_VERCEL,
+        "database": db_stat,
+        "storage": {
+            "backend": STORAGE_BACKEND,
+            "status": "ready",
+        },
+        "ai": {
+            "detector": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n",
+            "embedder": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",
+            "gemini_configured": bool(GEMINI_API_KEY),
+            "supabase_configured": bool(SUPABASE_URL),
         },
     }
