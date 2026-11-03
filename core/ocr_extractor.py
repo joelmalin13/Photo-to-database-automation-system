@@ -1,7 +1,7 @@
 """Offline OCR extractor using EasyOCR and schema-driven regex parsing.
 
 Provides local, API-key-free document extraction with bounding box confidence
-aggregation and line-item pattern parsing.
+aggregation, word-level scores, and line-item pattern parsing.
 """
 
 from __future__ import annotations
@@ -38,10 +38,9 @@ def get_ocr_reader() -> Any:
 
 
 class OCRExtractor(BaseExtractor):
-    """Offline extraction engine combining EasyOCR and rule-based regex parsing."""
+    """Default offline extraction engine combining EasyOCR and rule-based regex parsing."""
 
     def __init__(self) -> None:
-        """Initialize OCR engine."""
         self.engine_name = "easyocr"
 
     @timed
@@ -59,14 +58,26 @@ class OCRExtractor(BaseExtractor):
         except Exception as exc:
             raise ExtractionError(f"OCR execution failed: {exc}") from exc
 
-        # Extract text and average OCR line confidences
         lines: List[str] = []
         confidences_list: List[float] = []
+        word_confidences: List[Dict[str, Any]] = []
+
         for bbox, text, score in results:
             cleaned = text.strip()
             if cleaned:
                 lines.append(cleaned)
-                confidences_list.append(float(score))
+                score_val = float(score)
+                confidences_list.append(score_val)
+                # Word-level breakdown
+                word_confidences.append(
+                    {
+                        "word": cleaned,
+                        "confidence": round(score_val, 4),
+                        "box": [[int(p[0]), int(p[1])] for p in bbox]
+                        if isinstance(bbox, (list, tuple))
+                        else [],
+                    }
+                )
 
         raw_text = "\n".join(lines)
         avg_ocr_conf = (
@@ -75,14 +86,10 @@ class OCRExtractor(BaseExtractor):
             else 0.5
         )
 
-        # Auto-detect doc type if auto requested
         target_type = (
-            detect_document_type(raw_text) if doc_type == "auto" else doc_type
+            detect_document_type(raw_text) if doc_type in ("auto", "other") else doc_type
         )
-        if doc_type == "auto" and target_type in (
-            "student_id_form",
-            "generic_table",
-        ):
+        if doc_type in ("auto", "other"):
             from config.settings import load_schemas
 
             all_schemas = load_schemas()
@@ -92,19 +99,21 @@ class OCRExtractor(BaseExtractor):
             lines, raw_text, schema.get("fields", []), avg_ocr_conf
         )
 
-        line_items = (
-            self._parse_line_items(lines)
-            if schema.get("supports_line_items", False)
-            else []
-        )
+        # Parse sub-items (receipt items or student marks)
+        items = []
+        if target_type in ("receipts", "receipt_invoice"):
+            items = self._parse_receipt_items(lines)
+        elif target_type in ("students", "student_marksheet", "student_id_form"):
+            items = self._parse_student_marks(lines)
 
         return ExtractionResult(
             doc_type=target_type,
             fields=extracted_fields,
             confidences=field_confidences,
-            line_items=line_items,
+            line_items=items,
             raw_text=raw_text,
-            engine_used="ocr",
+            engine_used="EasyOCR",
+            word_confidences=word_confidences,
         )
 
     def _match_fields(
@@ -139,40 +148,75 @@ class OCRExtractor(BaseExtractor):
         """Search regex patterns against full raw text and individual lines."""
         for pattern in patterns:
             # Check multiline against full text first
-            match = re.search(pattern, raw_text, re.IGNORECASE | re.MULTILINE)
-            if match:
-                extracted = match.group(1).strip()
-                return extracted, round(min(0.95, base_confidence + 0.15), 2)
+            try:
+                match = re.search(pattern, raw_text, re.IGNORECASE | re.MULTILINE)
+                if match:
+                    extracted = match.group(1).strip()
+                    return extracted, round(min(0.96, base_confidence + 0.15), 2)
+            except Exception:
+                pass
 
             # Check individual lines
             for line in lines:
-                line_match = re.search(pattern, line, re.IGNORECASE)
-                if line_match:
-                    extracted = line_match.group(1).strip()
-                    return extracted, round(min(0.92, base_confidence + 0.1), 2)
+                try:
+                    line_match = re.search(pattern, line, re.IGNORECASE)
+                    if line_match:
+                        extracted = line_match.group(1).strip()
+                        return extracted, round(min(0.93, base_confidence + 0.1), 2)
+                except Exception:
+                    pass
 
         return None, 0.0
 
-    def _parse_line_items(self, lines: List[str]) -> List[Dict[str, Any]]:
-        """Identify potential tabular line items with quantities and prices."""
+    def _parse_receipt_items(self, lines: List[str]) -> List[Dict[str, Any]]:
+        """Identify potential tabular receipt line items with quantities and prices."""
         items: List[Dict[str, Any]] = []
-        # Pattern for: Item Description ... Qty x Price or Amount
         pattern = re.compile(
-            r"^(?P<desc>[A-Za-z0-9\s\-_]{3,30}?)\s+(?P<qty>\d+)?\s*[$€£]?\s*(?P<price>\d+[.,]\d{2})$"
+            r"^(?P<desc>[A-Za-z0-9\s\-_]{3,35}?)\s+(?P<qty>\d+)?\s*[$€£₹]?\s*(?P<price>\d+[.,]\d{2})$"
         )
         for line in lines:
             m = pattern.match(line.strip())
             if m:
                 desc = m.group("desc").strip()
-                qty = int(m.group("qty")) if m.group("qty") else 1
+                # Skip header-like keywords
+                if desc.lower() in ("total", "subtotal", "tax", "gst", "amount", "change"):
+                    continue
+                qty = float(m.group("qty")) if m.group("qty") else 1.0
                 price_str = m.group("price").replace(",", ".")
                 price = float(price_str)
                 items.append(
                     {
+                        "item_name": desc,
                         "description": desc,
                         "quantity": qty,
                         "unit_price": price,
-                        "amount": round(qty * price, 2),
+                        "total_price": round(qty * price, 2),
                     }
                 )
         return items
+
+    def _parse_student_marks(self, lines: List[str]) -> List[Dict[str, Any]]:
+        """Identify academic subjects and marks scored."""
+        marks: List[Dict[str, Any]] = []
+        # Pattern for: Subject Name/Code ... Marks / Max
+        pattern = re.compile(
+            r"^(?P<code>[A-Z0-9]{3,8}\b)?\s*(?P<name>[A-Za-z\s]{3,30}?)\s+(?P<marks>\d{1,3}(?:\.\d+)?)\s*(?:/\s*(?P<max>\d{2,3}))?$"
+        )
+        for line in lines:
+            m = pattern.match(line.strip())
+            if m:
+                name = m.group("name").strip()
+                if name.lower() in ("total", "percentage", "grand total", "result", "cgpa"):
+                    continue
+                code = m.group("code") or ""
+                obt = float(m.group("marks"))
+                max_m = float(m.group("max")) if m.group("max") else 100.0
+                marks.append(
+                    {
+                        "subject_name": name,
+                        "subject_code": code,
+                        "marks_obtained": obt,
+                        "max_marks": max_m,
+                    }
+                )
+        return marks

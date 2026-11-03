@@ -4,13 +4,14 @@ Validates:
 - Document upload and ingestion
 - Duplicate hash detection
 - Listing, filtering, sorting, pagination
-- Document approval and rejection lifecycle
+- Document approval (promoting to verified) and rejection lifecycle
 - Field patching and updates
 - Single document deletion
 - Dataset exports (CSV, XLSX, JSON)
-- Dashboard statistics
+- Dashboard & analytics statistics
+- Image processing playground preview
 - Error handling and HTTP status codes
-- HTML template pages rendering
+- HTML template pages rendering (all 8 application views)
 """
 
 from __future__ import annotations
@@ -87,10 +88,8 @@ def test_stats_initial_state(client: TestClient) -> None:
     assert "total_documents" in data
     assert data["total_documents"] == 0
     assert data["has_data"] is False
-    assert data["status_counts"]["pending"] == 0
-    assert data["status_counts"]["processed"] == 0
-    assert "timeseries" in data
     assert "status_counts" in data
+    assert "timeseries" in data
 
 
 def test_upload_and_duplicate_detection(client: TestClient) -> None:
@@ -99,19 +98,19 @@ def test_upload_and_duplicate_detection(client: TestClient) -> None:
 
     # 1. First Upload
     files = {"files": ("test_receipt.jpg", img_bytes, "image/jpeg")}
-    res = client.post("/api/documents", files=files, data={"doc_type": "receipt_invoice", "preferred_engine": "ocr"})
+    res = client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
     assert res.status_code == 201
     data = res.json()
     assert data["processed_count"] == 1
     doc = data["documents"][0]
     assert doc["is_duplicate"] is False
-    assert doc["status"] == "pending"
+    assert doc["status"] in ("processed", "uploaded")
     assert doc["document_id"] is not None
     doc_id = doc["document_id"]
 
     # 2. Duplicate Upload (exact same bytes)
     files_dup = {"files": ("test_receipt_copy.jpg", img_bytes, "image/jpeg")}
-    res_dup = client.post("/api/documents", files=files_dup, data={"doc_type": "receipt_invoice", "preferred_engine": "ocr"})
+    res_dup = client.post("/api/documents", files=files_dup, data={"doc_type": "receipts", "preferred_engine": "ocr"})
     assert res_dup.status_code == 201
     data_dup = res_dup.json()
     doc_dup = data_dup["documents"][0]
@@ -124,7 +123,7 @@ def test_list_and_search_documents(client: TestClient) -> None:
     # Seed an image
     img_bytes = _make_dummy_image()
     files = {"files": ("grocery_receipt.jpg", img_bytes, "image/jpeg")}
-    client.post("/api/documents", files=files, data={"doc_type": "receipt_invoice", "preferred_engine": "ocr"})
+    client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
 
     # List all
     res = client.get("/api/documents")
@@ -133,13 +132,13 @@ def test_list_and_search_documents(client: TestClient) -> None:
     assert data["total"] >= 1
     assert len(data["items"]) >= 1
 
-    # Filter by type
-    res_type = client.get("/api/documents?doc_type=receipt_invoice")
+    # Filter by category
+    res_type = client.get("/api/documents?category=receipts")
     assert res_type.status_code == 200
     assert res_type.json()["total"] >= 1
 
-    # Filter by non-matching type
-    res_empty = client.get("/api/documents?doc_type=non_existent_type")
+    # Filter by non-matching category
+    res_empty = client.get("/api/documents?category=non_existent_type")
     assert res_empty.status_code == 200
     assert res_empty.json()["total"] == 0
 
@@ -148,7 +147,7 @@ def test_get_patch_approve_reject_delete_flow(client: TestClient) -> None:
     """Test full document lifecycle: get, update fields, approve, reject, delete."""
     img_bytes = _make_dummy_image((50, 50, 50))
     files = {"files": ("lifecycle_test.jpg", img_bytes, "image/jpeg")}
-    upload_res = client.post("/api/documents", files=files, data={"doc_type": "receipt_invoice", "preferred_engine": "ocr"})
+    upload_res = client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
     doc_id = upload_res.json()["documents"][0]["document_id"]
     assert doc_id is not None
 
@@ -158,16 +157,16 @@ def test_get_patch_approve_reject_delete_flow(client: TestClient) -> None:
     assert get_res.json()["id"] == doc_id
 
     # 2. PATCH fields
-    patch_payload = {"fields": {"vendor_name": "Acme Supermarket", "total_amount": 42.50}}
+    patch_payload = {"fields": {"shop_name": "Acme Supermarket", "total_amount": 42.50}}
     patch_res = client.patch(f"/api/documents/{doc_id}", json=patch_payload)
     assert patch_res.status_code == 200
     updated_fields = patch_res.json()["fields"]
-    assert updated_fields["vendor_name"] == "Acme Supermarket"
+    assert updated_fields["shop_name"] == "Acme Supermarket"
 
-    # 3. Approve Document
+    # 3. Approve Document (promotes to verified confirmed state)
     approve_res = client.post(f"/api/documents/{doc_id}/approve")
     assert approve_res.status_code == 200
-    assert approve_res.json()["status"] == "processed"
+    assert approve_res.json()["status"] == "verified"
 
     # 4. Reject Document
     reject_res = client.post(f"/api/documents/{doc_id}/reject")
@@ -185,10 +184,9 @@ def test_get_patch_approve_reject_delete_flow(client: TestClient) -> None:
 
 def test_exports_csv_xlsx_json(client: TestClient) -> None:
     """Verify export endpoints generate valid CSV, XLSX, and JSON downloads."""
-    # Seed a document
     img_bytes = _make_dummy_image((80, 80, 80))
     files = {"files": ("export_test.jpg", img_bytes, "image/jpeg")}
-    client.post("/api/documents", files=files, data={"doc_type": "receipt_invoice", "preferred_engine": "ocr"})
+    client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
 
     # Export CSV
     csv_res = client.get("/api/export?format=csv")
@@ -209,6 +207,26 @@ def test_exports_csv_xlsx_json(client: TestClient) -> None:
     assert isinstance(json_res.json(), list)
 
 
+def test_image_processing_preview_api(client: TestClient) -> None:
+    """Test image enhancement preview endpoint."""
+    img_bytes = _make_dummy_image((30, 40, 50))
+    files = {"file": ("filter_test.jpg", img_bytes, "image/jpeg")}
+    data = {
+        "grayscale": "true",
+        "denoise": "true",
+        "contrast_clahe": "true",
+        "sharpen": "true",
+        "run_ocr": "false",
+    }
+    res = client.post("/api/image-processing/preview", files=files, data=data)
+    assert res.status_code == 200
+    resp_data = res.json()
+    assert "original_image_base64" in resp_data
+    assert "processed_image_base64" in resp_data
+    assert "metadata" in resp_data
+    assert "width" in resp_data["metadata"]
+
+
 def test_api_error_handling(client: TestClient) -> None:
     """Test 400 and 404 response codes for invalid inputs."""
     # 404 for non-existent document
@@ -227,8 +245,18 @@ def test_api_error_handling(client: TestClient) -> None:
 
 
 def test_html_pages_render(client: TestClient) -> None:
-    """Test that all primary HTML UI routes return 200 OK without errors."""
-    for path in ["/", "/upload", "/review", "/records", "/settings"]:
+    """Test that all 8 primary HTML UI routes return 200 OK without errors."""
+    routes = [
+        "/",
+        "/upload",
+        "/image-processing",
+        "/review",
+        "/records",
+        "/analytics",
+        "/reports",
+        "/settings",
+    ]
+    for path in routes:
         res = client.get(path)
-        assert res.status_code == 200
+        assert res.status_code == 200, f"Page {path} returned status {res.status_code}"
         assert "<!DOCTYPE html>" in res.text

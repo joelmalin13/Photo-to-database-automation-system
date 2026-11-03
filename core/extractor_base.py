@@ -1,6 +1,6 @@
 """Abstract Base Class and factory function for SnapBase extraction engines.
 
-Defines the polymorphic contract shared by Gemini vision and offline OCR engines.
+Defines the polymorphic contract shared by EasyOCR (default), Tesseract, and Gemini.
 """
 
 from __future__ import annotations
@@ -20,94 +20,58 @@ class BaseExtractor(ABC):
     def extract(
         self, image_path: Path, doc_type: str, schema: Dict[str, Any]
     ) -> ExtractionResult:
-        """Extract structured fields and line items from a preprocessed document image.
-
-        Args:
-            image_path: Filesystem path to the preprocessed image.
-            doc_type: Document classification category.
-            schema: Field definitions and extraction rules from schemas.json.
-
-        Returns:
-            ExtractionResult: Structured container holding fields, scores, and text.
-        """
+        """Extract structured fields and line items from a preprocessed document image."""
         raise NotImplementedError
 
 
 def detect_document_type(text_sample: str) -> str:
-    """Classify document category automatically based on heuristic keyword matching.
-
-    Args:
-        text_sample: Extracted or OCR-recognized textual content.
-
-    Returns:
-        str: Detected document type identifier.
-    """
+    """Classify document category automatically based on heuristic keyword matching."""
     text_lower = text_sample.lower()
 
-    # Student / ID indicators
-    id_signals = [
-        "student",
-        "identity",
-        "id card",
-        "roll no",
-        "university",
-        "college",
-        "blood group",
-        "dob",
-        "date of birth",
-    ]
-    if sum(1 for s in id_signals if s in text_lower) >= 2:
-        return "student_id_form"
+    # Business Card indicators
+    card_signals = ["tel", "phone", "email", "www", "website", "designation", "manager", "director", "consultant", "inc", "ltd"]
+    if sum(1 for s in card_signals if s in text_lower) >= 3 and ("@" in text_sample or ".com" in text_lower):
+        return "business_cards"
 
-    # Receipt / Invoice indicators
+    # Student Marksheet / ID indicators
+    student_signals = [
+        "student", "usn", "marks", "grade", "percentage", "semester", "subject",
+        "university", "college", "roll no", "result", "distinction"
+    ]
+    if sum(1 for s in student_signals if s in text_lower) >= 2:
+        return "students"
+
+    # Receipts / Bills indicators
     receipt_signals = [
-        "invoice",
-        "receipt",
-        "total",
-        "tax",
-        "vat",
-        "subtotal",
-        "payment",
-        "amount due",
-        "balance",
-        "cashier",
-        "bill",
+        "invoice", "receipt", "total", "tax", "vat", "gst", "subtotal", "payment",
+        "amount due", "balance", "cashier", "bill", "shop", "qty", "item"
     ]
     if sum(1 for s in receipt_signals if s in text_lower) >= 2:
-        return "receipt_invoice"
-
-    # Table indicators
-    table_signals = ["table", "qty", "item", "unit price", "description", "rate"]
-    if sum(1 for s in table_signals if s in text_lower) >= 2:
-        return "generic_table"
+        return "receipts"
 
     # Default fallback
-    return "receipt_invoice"
+    return "receipts"
 
 
 def get_extractor(engine_name: str | None = None) -> BaseExtractor:
     """Factory function instantiating the requested or default extraction engine.
 
-    Args:
-        engine_name: 'gemini' or 'ocr'. Defaults to system configuration.
-
-    Returns:
-        BaseExtractor: Concrete polymorphic extractor instance.
+    Specification: EasyOCR is the default engine. Tesseract and Gemini are optional.
     """
     chosen = (engine_name or DEFAULT_ENGINE).lower()
 
-    if chosen == "gemini":
-        if not GEMINI_API_KEY:
-            logger.warning(
-                "GEMINI_API_KEY not configured. Falling back to offline OCR engine."
-            )
-            from core.ocr_extractor import OCRExtractor
+    if chosen == "tesseract":
+        from core.tesseract_extractor import TesseractExtractor
+        return TesseractExtractor()
 
+    elif chosen == "gemini":
+        if not GEMINI_API_KEY:
+            logger.warning("GEMINI_API_KEY not configured. Falling back to default EasyOCR engine.")
+            from core.ocr_extractor import OCRExtractor
             return OCRExtractor()
         from core.gemini_extractor import GeminiExtractor
-
         return GeminiExtractor()
 
+    # Default engine: EasyOCR
     from core.ocr_extractor import OCRExtractor
-
     return OCRExtractor()

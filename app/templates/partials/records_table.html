@@ -64,10 +64,15 @@
 
         <!-- Status -->
         <td class="px-4 py-3.5 whitespace-nowrap" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
-          {% if doc.status == 'processed' %}
+          {% if doc.status == 'verified' %}
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Approved
+            Verified (Confirmed)
+          </span>
+          {% elif doc.status == 'processed' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            Pending Review
           </span>
           {% elif doc.status == 'rejected' %}
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
@@ -75,9 +80,8 @@
             Rejected
           </span>
           {% else %}
-          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-            Pending
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+            {{ doc.status|capitalize }}
           </span>
           {% endif %}
         </td>

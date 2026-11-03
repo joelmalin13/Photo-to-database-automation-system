@@ -1,81 +1,90 @@
-# SnapBase: 3-Minute Live Demonstration Script & Viva Q&A
+# SnapBase: Live Demonstration Script & Viva Defense Guide
 
-This document provides a timed, step-by-step demonstration walkthrough for evaluators and answers 5 critical viva interview questions for the upgraded FastAPI + HTMX full-stack architecture.
+This document provides a timed, step-by-step demonstration walkthrough for evaluators, judges, and instructors, followed by core viva interview defense questions for the SnapBase photo-to-database automation system.
 
 ---
 
-## 3-Minute Live Demo Script
+## 3-Minute Live Demonstration Walkthrough
 
-### Step 1: System Startup & Portal Inspection (0:00 - 0:30)
-1. Launch the application:
+### Step 1: System Startup & Architecture Verification (0:00 - 0:30)
+1. Launch the server from terminal:
    ```bash
    uvicorn app.main:app --reload
    ```
 2. Open `http://localhost:8000` in the browser.
-3. **Explain to Evaluator**:
-   - Point out the unified SaaS design system: Inter font, clean white backgrounds, deep black navigation bar, and single crimson red accent (`#C62828`).
-   - Highlight the top bar engine indicator pill: Displays active extraction engine (Gemini or Offline OCR) and connection status.
-   - Point out the KPI summary cards with "No data yet" zero-state protection and Chart.js analytics.
+3. **Key Points for Evaluators**:
+   - Point out the unified SaaS design system: Inter typography, white canvas, subtle gray borders, deep-black header (`#111111`), and crimson red accent (`#C62828`). Zero emojis anywhere in the system.
+   - Point out the top bar status pills:
+     - **Database Health**: Shows `MySQL (Connected)` or `SQLite (Fallback Active)`. Explain the zero-downtime resilience: if MySQL is unreachable, the server auto-falls back to SQLite without crashing.
+     - **OCR Engine**: Shows default `EasyOCR` (with word bounding boxes and confidence).
    - Show the interactive Swagger API documentation at `http://localhost:8000/docs`.
-
-### Step 2: Ingest Documents & Duplicate Detection (0:30 - 1:15)
-1. Navigate to **"Upload Photos"** (`/upload`).
-2. Set Document Type to **"Auto-detect"**.
-3. Drag and drop `sample_data/receipt_1.png` and `sample_data/student_id_1.png`.
-4. Click **"Ingest & Process Documents"**.
-5. **Explain to Evaluator**:
-   - Ingestion is handled via an asynchronous FastAPI service layer (`DocumentService.ingest_upload`).
-   - OpenCV preprocessing performs EXIF orientation correction, deskewing, and Laplacian variance blur calculation.
-   - SHA-256 cryptographic hash is computed to immediately detect duplicate submissions.
-   - Demonstrate duplicate prevention: Re-upload `receipt_1.png` to show the duplicate warning badge pointing to the existing record ID.
-
-### Step 3: Human-in-the-Loop Review & Field Correction (1:15 - 2:00)
-1. Click **"Review"** on an ingested document or navigate to `/review`.
-2. **Explain to Evaluator**:
-   - Highlight the split-screen verification interface: Pannable and zoomable image viewer on the left (with zoom in/out, reset, and 90-degree rotate controls), and editable form on the right.
-   - Color-coded confidence indicators next to each field:
-     - Green (>= 85%)
-     - Amber (70% - 84%)
-     - Red (< 70% with low-confidence alert box).
-   - Point out the keyboard shortcuts (`Ctrl+Enter` to approve, `Esc` to reject).
-3. Make an intentional field edit (e.g., adjust vendor name or total amount) and add a line item.
-4. Click **"Approve Document"** (or press `Ctrl+Enter`).
-5. Observe the status badge transitioning from **"Pending"** (Amber) to **"Approved"** (Green) with the `is_edited` flag marked `True`.
-
-### Step 4: Records Repository, Full-Text Search & Multi-Format Export (2:00 - 2:35)
-1. Navigate to **"Records Repository"** (`/records`).
-2. Click the status filter chip **"Approved"** or type into the search box.
-3. **Explain to Evaluator**:
-   - HTMX performs live partial page swaps (`/partials/records-table`) with a debounced 300ms trigger, delivering an SPA feel without a heavy frontend framework.
-   - Click a document row to open the slide-over inspection drawer (`/partials/drawer/{id}`) showing full field extractions, line items, and quick action buttons.
-   - Click **"Export Repository"** to demonstrate multi-format download: **CSV**, **Excel (.xlsx)**, and **JSON**.
-
-### Step 5: System Settings & Analytics (2:35 - 3:00)
-1. Navigate to **"System Settings"** (`/settings`).
-2. **Explain to Evaluator**:
-   - Point out the extraction engine toggle (Google Gemini vs Offline OCR).
-   - Explain the confidence threshold slider that gates automatic human review routing.
-   - Navigate to `/` (Dashboard) to show the updated Chart.js donut chart (status split), document types bar chart, and time-series line chart reflecting the newly approved records.
 
 ---
 
-## Top 5 Viva Questions & Short Answers
+### Step 2: Document Ingestion & Duplicate Detection (0:30 - 1:00)
+1. Navigate to **"Upload Documents"** (`/upload`).
+2. Select Document Type: **"Receipts / Bills"** (or Student Marksheet / Business Card).
+3. Drag and drop `sample_data/receipt_1.png` and click **"Ingest & Process Documents"**.
+4. **Key Points for Evaluators**:
+   - Instant SHA-256 cryptographic image hashing.
+   - OpenCV preprocessing handles EXIF auto-rotation, deskewing, and Laplacian variance blur calculation.
+   - **Demonstrate Duplicate Prevention**: Re-upload `receipt_1.png`. The system instantly detects the duplicate hash, prevents duplicate database insertion, and provides a direct link to the existing document record.
 
-### Q1: Why did you migrate from Streamlit to FastAPI + HTMX?
-> **Answer:** Streamlit reruns the entire Python script on every user interaction, which causes high server memory overhead, prevents granular partial UI updates, and limits architectural decoupling. Migrating to FastAPI + HTMX established a true production-grade architecture:
-> 1. A dedicated service layer separating business logic from routing.
-> 2. Open standard REST API endpoints with auto-generated OpenAPI/Swagger documentation (`/docs`).
-> 3. Sub-50ms HTMX partial swaps for search and slide-over drawers without needing a complex Node/React build pipeline.
-> 4. True asynchronous concurrency and background processing.
+---
 
-### Q2: How does SnapBase handle image duplicates without re-running expensive OCR or AI models?
-> **Answer:** Before executing preprocessing or calling any extraction engine, SnapBase calculates a SHA-256 cryptographic digest of the raw image bytes. It queries the `documents` table by indexed `image_hash`. If a match is found, processing halts immediately, and the system returns the existing document record alongside a duplicate flag, saving computation and API quota.
+### Step 3: Interactive Image Processing Playground (1:00 - 1:30)
+1. Navigate to **"Image Processing"** (`/image-processing`).
+2. Upload a sample document.
+3. Toggle enhancement controls:
+   - **Contrast (CLAHE)**: Enhances faded or uneven thermal receipt print.
+   - **Denoise & Sharpen**: Clarifies fine lines and text edges.
+   - **Adaptive / Otsu Thresholding**: Converts document into high-contrast binary text.
+4. Click **"Run OCR"** or **"Retry OCR after enhancement"**.
+5. **Key Points for Evaluators**:
+   - Show the side-by-side original vs. processed image viewer.
+   - Point out the extracted text box and the interactive per-word confidence pill tags showing individual recognition certainty.
 
-### Q3: Why did you implement an Abstract Base Class (`BaseExtractor`) instead of directly calling Gemini or EasyOCR?
-> **Answer:** We implemented `BaseExtractor` using Python's `abc.ABC` to satisfy the Open-Closed and Dependency Inversion Principles. The application interacts solely with the abstract polymorphic `extract()` interface. This allows seamless switching between cloud vision and offline OCR via a factory function (`get_extractor()`) and enables automated fallback when external APIs fail or credentials are absent.
+---
 
-### Q4: How is database concurrency and transaction safety handled in the FastAPI service layer?
-> **Answer:** Database interactions are managed via FastAPI's `Depends(get_db)` dependency and a custom context manager `get_db_session()` in `db/session.py`. Both implement the Unit of Work pattern: wrapping transactions in a `try...except...finally` block that automatically commits upon success, performs an explicit rollback if any exception occurs, and guarantees session closure in the `finally` block to prevent SQLite connection leaks.
+### Step 4: Human-in-the-Loop Review & Data Promotion (1:30 - 2:15)
+1. Navigate to **"Review"** (`/review`) and select the pending document.
+2. **Key Points for Evaluators**:
+   - **Split View**: Zoomable, pannable, rotatable image canvas on the left; editable structured form on the right.
+   - **Confidence Meters**: Fields scoring below the threshold are visually highlighted in amber with confidence percentages.
+   - **The Strict Integrity Rule**: Highlight that raw OCR data is stored only in the generic staging table `documents` with status `processed`. The business table (`receipts`, `students`, or `business_cards`) remains empty until approval!
+3. Review and edit any field (e.g., adjust shop name or total amount).
+4. Click **"Approve Document"** (or press `Ctrl+Enter`).
+5. **Observe**: The document status transitions to `verified`, and the confirmed record is created in the normalized relational tables.
 
-### Q5: How does the offline OCR engine parse key-value fields from raw OCR text lines?
-> **Answer:** The offline extractor uses a schema-driven regex engine. In `config/schemas.json`, each field defines ordered regular expressions. The engine scans both multiline document text and individual text bounding boxes, capturing target groups (dates, float amounts, names). Confidence scores are dynamically weighted based on OCR character recognition quality and pattern specificity.
+---
+
+### Step 5: Database Explorer, Analytics & Formatted Reports (2:15 - 3:00)
+1. **Records Explorer (`/records`)**:
+   - Demonstrate HTMX live search and category filter chips (`Receipts`, `Students`, `Business Cards`).
+   - Click a record to open the detailed inspector modal.
+2. **Analytics Dashboard (`/analytics`)**:
+   - View real-time Chart.js charts: Category Distribution (Donut), Ingestion Trend (Line), Top Merchants by Total Spend (Bar), and Student Performance Comparison (Bar).
+3. **Export Reports (`/reports`)**:
+   - Download the **Excel (`.xlsx`)** report. Open or highlight that OpenPyXL formats the spreadsheet with dark header styling, bold summary totals, and auto-fitted columns.
+   - Highlight CSV and JSON download options.
+
+---
+
+## Top 5 Viva Defense Questions & Answers
+
+### Q1: How does SnapBase guarantee data integrity when OCR text is noisy or inaccurate?
+> **Answer:** SnapBase enforces a strict separation between raw OCR output and confirmed business data. All ingested images and their extracted text are initially quarantined in a staging table (`documents`) with status `processed`. Confirmed domain tables (`receipts`, `receipt_items`, `students`, `marks`, `business_cards`) are only populated when a human operator verifies and approves the record. If an image is unreadable or malformed, it can be rejected, leaving business ledgers untainted.
+
+### Q2: What is the architectural difference between OCR Confidence and Field Extraction Accuracy?
+> **Answer:** They measure two different stages of the pipeline:
+> 1. **OCR Confidence** is a deep-learning statistical metric from the OCR model (e.g. EasyOCR) reflecting its internal probability that character glyphs match the text strings.
+> 2. **Field Extraction Accuracy** measures end-to-end semantic correctness: whether the parsed, cleaned, and normalized key-value pairs (e.g. `shop_name`, `total_amount`, `usn`) match the expected ground-truth data. High character confidence doesn't guarantee correct layout mapping, whereas robust regex and Pandas post-processing can often recover 100% accurate fields even from slightly noisy OCR text.
+
+### Q3: How does the system achieve zero downtime if the MySQL database server is unreachable?
+> **Answer:** In `db/session.py`, the engine initialization performs an active ping against the configured MySQL URI. If MySQL is unreachable (network timeout, authentication failure, or daemon offline), an exception is caught, a warning is logged, and the engine automatically falls back to a local SQLite database (`data/snapbase.db`). The system never crashes on startup, and the current connection status is clearly reflected in the top bar and Settings page.
+
+### Q4: Why did you build the Image Processing Playground?
+> **Answer:** Real-world photos often suffer from poor lighting, thermal fade, motion blur, or uneven perspective. Rather than failing permanently, the Image Processing playground gives users interactive computer vision controls (CLAHE contrast, Otsu adaptive thresholding, Gaussian blur, Laplacian denoising, morphological sharpening, and deskewing) with immediate side-by-side feedback. Users can test enhancements and re-run OCR on the clarified image directly in the browser.
+
+### Q5: How are duplicates detected, and what is the computational overhead?
+> **Answer:** Duplicate detection uses SHA-256 cryptographic hashing on the raw image byte stream during initial file validation. Computing the SHA-256 hash takes less than 15 milliseconds for a typical 2MB photo. The database enforces a `UNIQUE` constraint on `image_hash`. When a duplicate is detected, the pipeline halts further expensive OCR inference and returns the existing document record with an informational notice.

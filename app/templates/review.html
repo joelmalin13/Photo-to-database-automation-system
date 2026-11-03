@@ -259,11 +259,14 @@ function reviewManager(docId) {
       }
     },
     async approveDocument() {
-      await this.saveChanges();
       try {
-        const res = await fetch(`/api/documents/${this.docId}/approve`, { method: 'POST' });
+        const res = await fetch(`/api/documents/${this.docId}/approve`, { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: this.fields, items: this.lineItems })
+        });
         if (!res.ok) throw new Error('Failed approving document');
-        window.showToast('Document verified & approved!', 'success');
+        window.showToast('Document verified, approved & promoted to database!', 'success');
         setTimeout(() => window.location.reload(), 400);
       } catch (err) {
         window.showToast(err.message, 'error');

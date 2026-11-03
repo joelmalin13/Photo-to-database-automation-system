@@ -1,0 +1,182 @@
+{
+  "receipt_01.png": {
+    "category": "receipts",
+    "ground_truth": {
+      "shop_name": "Apex Supermarket",
+      "receipt_number": "RCP-101",
+      "date": "2024-05-12",
+      "phone": "555-0101",
+      "subtotal": 25.0,
+      "tax_amount": 2.06,
+      "total_amount": 27.06
+    }
+  },
+  "receipt_02.png": {
+    "category": "receipts",
+    "ground_truth": {
+      "shop_name": "Metro Electronics",
+      "receipt_number": "RCP-102",
+      "date": "2024-06-20",
+      "phone": "555-0102",
+      "subtotal": 150.0,
+      "tax_amount": 12.0,
+      "total_amount": 162.0
+    }
+  },
+  "receipt_03.png": {
+    "category": "receipts",
+    "ground_truth": {
+      "shop_name": "City Cafe Bistro",
+      "receipt_number": "RCP-103",
+      "date": "2024-07-04",
+      "phone": "555-0103",
+      "subtotal": 18.5,
+      "tax_amount": 1.5,
+      "total_amount": 20.0
+    }
+  },
+  "receipt_04.png": {
+    "category": "receipts",
+    "ground_truth": {
+      "shop_name": "Green Grocery Mart",
+      "receipt_number": "RCP-104",
+      "date": "2024-08-15",
+      "phone": "555-0104",
+      "subtotal": 42.0,
+      "tax_amount": 3.5,
+      "total_amount": 45.5
+    }
+  },
+  "receipt_05.png": {
+    "category": "receipts",
+    "ground_truth": {
+      "shop_name": "Urban Bookstore",
+      "receipt_number": "RCP-105",
+      "date": "2024-09-01",
+      "phone": "555-0105",
+      "subtotal": 35.0,
+      "tax_amount": 2.8,
+      "total_amount": 37.8
+    }
+  },
+  "student_01.png": {
+    "category": "students",
+    "ground_truth": {
+      "name": "Alex Johnson",
+      "usn": "1MS21CS001",
+      "college": "City Institute of Technology",
+      "semester": "5th Sem",
+      "total_marks": 450.0,
+      "percentage": 90.0,
+      "result": "DISTINCTION"
+    }
+  },
+  "student_02.png": {
+    "category": "students",
+    "ground_truth": {
+      "name": "Priya Sharma",
+      "usn": "1MS21CS045",
+      "college": "National Engineering College",
+      "semester": "6th Sem",
+      "total_marks": 410.0,
+      "percentage": 82.0,
+      "result": "FIRST CLASS"
+    }
+  },
+  "student_03.png": {
+    "category": "students",
+    "ground_truth": {
+      "name": "Michael Brown",
+      "usn": "1MS21CS078",
+      "college": "State University",
+      "semester": "4th Sem",
+      "total_marks": 380.0,
+      "percentage": 76.0,
+      "result": "FIRST CLASS"
+    }
+  },
+  "student_04.png": {
+    "category": "students",
+    "ground_truth": {
+      "name": "Deepa Nair",
+      "usn": "1MS21CS092",
+      "college": "City Institute of Technology",
+      "semester": "5th Sem",
+      "total_marks": 465.0,
+      "percentage": 93.0,
+      "result": "DISTINCTION"
+    }
+  },
+  "student_05.png": {
+    "category": "students",
+    "ground_truth": {
+      "name": "Rahul Verma",
+      "usn": "1MS21CS110",
+      "college": "Apex Institute of Technology",
+      "semester": "6th Sem",
+      "total_marks": 350.0,
+      "percentage": 70.0,
+      "result": "SECOND CLASS"
+    }
+  },
+  "card_01.png": {
+    "category": "business_cards",
+    "ground_truth": {
+      "person_name": "John Doe",
+      "designation": "Senior Software Engineer",
+      "company_name": "TechCorp Solutions",
+      "phone": "+1-555-234-5678",
+      "email": "john.doe@techcorp.com",
+      "website": "www.techcorp.com",
+      "address": "100 Silicon Way, Tech Park"
+    }
+  },
+  "card_02.png": {
+    "category": "business_cards",
+    "ground_truth": {
+      "person_name": "Sarah Miller",
+      "designation": "Marketing Director",
+      "company_name": "Horizon Media",
+      "phone": "+1-555-345-6789",
+      "email": "sarah.miller@horizonmedia.com",
+      "website": "www.horizonmedia.com",
+      "address": "25 Broadway Ave, New York"
+    }
+  },
+  "card_03.png": {
+    "category": "business_cards",
+    "ground_truth": {
+      "person_name": "David Lee",
+      "designation": "Managing Partner",
+      "company_name": "Lee Financial Consultants",
+      "phone": "+1-555-456-7890",
+      "email": "david.lee@leefinancial.com",
+      "website": "www.leefinancial.com",
+      "address": "500 Wall Street, Financial District"
+    }
+  },
+  "card_04.png": {
+    "category": "business_cards",
+    "ground_truth": {
+      "person_name": "Emma Watson",
+      "designation": "Creative Lead",
+      "company_name": "Studio Design Labs",
+      "phone": "+1-555-567-8901",
+      "email": "emma.watson@studiodesign.com",
+      "website": "www.studiodesign.com",
+      "address": "12 Art Studio Lane, Seattle"
+    }
+  },
+  "card_05.png": {
+    "category": "business_cards",
+    "ground_truth": {
+      "person_name": "Robert Chen",
+      "designation": "Chief Executive Officer",
+      "company_name": "Apex Robotics Inc",
+      "phone": "+1-555-678-9012",
+      "email": "robert.chen@apexrobotics.com",
+      "website": "www.apexrobotics.com",
+      "address": "77 Robotics Boulevard, Boston"
+    }
+  }
+}

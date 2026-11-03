@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+    <div>
+      <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Operational Analytics</h2>
+      <p class="text-xs text-gray-500 mt-1">Real-time intelligence from confirmed database records: expenses, student marks, category breakdown, and accuracy.</p>
+    </div>
+
+    <!-- Quick Export Link -->
+    <a 
+      href="/reports" 
+      class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+    >
+      <i data-lucide="download" class="w-4 h-4"></i>
+      <span>Export Detailed Reports</span>
+    </a>
+  </div>
+
+  <!-- Summary KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Total Ingested</span>
+      <div class="text-2xl font-extrabold text-gray-900 mt-1">{{ analytics.metrics.total_documents }}</div>
+      <div class="text-[11px] text-gray-400 mt-1">All captured documents</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Confirmed Verified</span>
+      <div class="text-2xl font-extrabold text-emerald-600 mt-1">{{ analytics.metrics.verified_count }}</div>
+      <div class="text-[11px] text-emerald-600/80 mt-1">In normalized tables</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Total Spend Tracked</span>
+      <div class="text-2xl font-extrabold text-gray-900 mt-1">${{ "%.2f"|format(analytics.total_spend) }}</div>
+      <div class="text-[11px] text-gray-400 mt-1">Confirmed receipt bills</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Average Confidence</span>
+      <div class="text-2xl font-extrabold text-brand-red mt-1">{{ (analytics.metrics.average_confidence * 100)|round }}%</div>
+      <div class="text-[11px] text-gray-400 mt-1">Across all extractions</div>
+    </div>
+  </div>
+
+  <!-- Chart Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Chart 1: Category Distribution -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">1. Category Distribution</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Ratio of receipts, marksheets, and business cards.</p>
+      </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="categoryDistChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 2: Success vs Failure -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">2. Processing Pipeline Outcomes</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Success vs rejected/failed document counts.</p>
+      </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="successFailureChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 3: Monthly Volume Trend -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">3. Monthly Ingestion Trend</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Document ingestion frequency over time.</p>
+      </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="monthlyTrendChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 4: Top Shops by Spend -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-2">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">4. Top Merchants by Expenditure</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Aggregate spend breakdown across confirmed receipt vendors.</p>
+      </div>
+      <div class="h-64 mt-4 relative flex items-center justify-center">
+        {% if analytics.top_shops.labels %}
+        <canvas id="topShopsChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No confirmed receipts recorded yet. Approve a receipt in 'Review' to populate.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 5: Student Marks Comparison -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-1">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">5. Student Performance Comparison</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Top student marksheet percentage ranks.</p>
+      </div>
+      <div class="h-64 mt-4 relative flex items-center justify-center">
+        {% if analytics.student_comparison.labels %}
+        <canvas id="studentPerformanceChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No confirmed student marksheets yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Chart 1: Category Distribution
+  const catEl = document.getElementById('categoryDistChart');
+  if (catEl) {
+    const rawCounts = {{ analytics.metrics.category_counts|tojson }};
+    const labels = Object.keys(rawCounts).map(k => k.replace(/_/g, ' ').toUpperCase());
+    const dataVals = Object.values(rawCounts);
+    new Chart(catEl, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['Receipts'],
+        datasets: [{
+          data: dataVals.length ? dataVals : [1],
+          backgroundColor: ['#C62828', '#111827', '#10B981', '#F59E0B'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // Chart 2: Success vs Failure
+  const sfEl = document.getElementById('successFailureChart');
+  if (sfEl) {
+    new Chart(sfEl, {
+      type: 'pie',
+      data: {
+        labels: ['Successful / Verified', 'Rejected / Failed'],
+        datasets: [{
+          data: [{{ analytics.success_vs_failure.success }}, {{ analytics.success_vs_failure.failure }}],
+          backgroundColor: ['#10B981', '#EF4444'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+      }
+    });
+  }
+
+  // Chart 3: Monthly Trend
+  const trendEl = document.getElementById('monthlyTrendChart');
+  if (trendEl) {
+    new Chart(trendEl, {
+      type: 'line',
+      data: {
+        labels: {{ analytics.monthly_trend.labels|tojson }},
+        datasets: [{
+          label: 'Documents',
+          data: {{ analytics.monthly_trend['values']|tojson }},
+          borderColor: '#C62828',
+          backgroundColor: 'rgba(198, 40, 40, 0.08)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // Chart 4: Top Shops
+  const shopsEl = document.getElementById('topShopsChart');
+  if (shopsEl) {
+    new Chart(shopsEl, {
+      type: 'bar',
+      data: {
+        labels: {{ analytics.top_shops.labels|tojson }},
+        datasets: [{
+          label: 'Total Spend ($)',
+          data: {{ analytics.top_shops.expenses|tojson }},
+          backgroundColor: '#111827',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' } }
+        }
+      }
+    });
+  }
+
+  // Chart 5: Student Performance
+  const studEl = document.getElementById('studentPerformanceChart');
+  if (studEl) {
+    new Chart(studEl, {
+      type: 'bar',
+      data: {
+        labels: {{ analytics.student_comparison.labels|tojson }},
+        datasets: [{
+          label: 'Score %',
+          data: {{ analytics.student_comparison.percentages|tojson }},
+          backgroundColor: '#C62828',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { max: 100, beginAtZero: true, grid: { color: '#F3F4F6' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

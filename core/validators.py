@@ -21,43 +21,58 @@ class ExtractionResult(BaseModel):
     line_items: List[Dict[str, Any]] = Field(default_factory=list)
     raw_text: str = ""
     engine_used: str = "unknown"
+    word_confidences: List[Dict[str, Any]] = Field(default_factory=list)
 
 
-class ReceiptInvoiceSchema(BaseModel):
-    """Schema model for commercial receipts and purchase invoices."""
+class ReceiptSchema(BaseModel):
+    """Schema model for receipts and bills."""
 
-    vendor_name: str
-    invoice_number: Optional[str] = None
+    shop_name: str
+    receipt_number: Optional[str] = None
     date: Optional[str] = None
-    total_amount: Optional[float] = None
+    phone: Optional[str] = None
+    subtotal: Optional[float] = None
     tax_amount: Optional[float] = None
-    payment_method: Optional[str] = None
+    total_amount: float
 
 
-class StudentIDSchema(BaseModel):
-    """Schema model for student registration and identification cards."""
+class StudentMarksheetSchema(BaseModel):
+    """Schema model for student marksheets and grade cards."""
 
-    full_name: str
-    id_number: str
-    date_of_birth: Optional[str] = None
-    institution: str
-    valid_until: Optional[str] = None
-    blood_group: Optional[str] = None
+    name: str
+    usn: str
+    college: Optional[str] = None
+    semester: Optional[str] = None
+    total_marks: Optional[float] = None
+    percentage: Optional[float] = None
+    result: Optional[str] = "PASS"
 
 
-class GenericTableSchema(BaseModel):
-    """Schema model for generic tabular documents and schedules."""
+class BusinessCardSchema(BaseModel):
+    """Schema model for business cards."""
 
-    table_title: str
-    record_date: Optional[str] = None
-    total_rows: Optional[int] = None
-    summary_notes: Optional[str] = None
+    person_name: str
+    designation: Optional[str] = None
+    company_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    website: Optional[str] = None
+    address: Optional[str] = None
 
+
+# Backward compatibility aliases
+ReceiptInvoiceSchema = ReceiptSchema
+StudentIDSchema = StudentMarksheetSchema
+GenericTableSchema = BaseModel
 
 TYPE_MODEL_MAP = {
-    "receipt_invoice": ReceiptInvoiceSchema,
-    "student_id_form": StudentIDSchema,
-    "generic_table": GenericTableSchema,
+    "receipts": ReceiptSchema,
+    "receipt_invoice": ReceiptSchema,
+    "students": StudentMarksheetSchema,
+    "student_marksheet": StudentMarksheetSchema,
+    "student_id_form": StudentMarksheetSchema,
+    "business_cards": BusinessCardSchema,
+    "business_card": BusinessCardSchema,
 }
 
 
@@ -67,18 +82,7 @@ def validate_extracted_fields(
     raw_confidences: Dict[str, float],
     schema_def: Dict[str, Any],
 ) -> Tuple[Dict[str, Any], Dict[str, float], List[str]]:
-    """Validate normalized fields against schema rules and compute field confidences.
-
-    Args:
-        doc_type: Document classification key.
-        normalized_fields: Normalized field key-value pairs.
-        raw_confidences: Initial engine-provided confidence scores.
-        schema_def: Loaded schema definition for this document type.
-
-    Returns:
-        Tuple[Dict[str, Any], Dict[str, float], List[str]]:
-            (validated_fields, final_confidences, validation_warnings)
-    """
+    """Validate normalized fields against schema rules and compute field confidences."""
     field_defs = schema_def.get("fields", [])
     validated: Dict[str, Any] = dict(normalized_fields)
     confidences: Dict[str, float] = dict(raw_confidences)

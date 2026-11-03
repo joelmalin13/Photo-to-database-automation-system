@@ -1,207 +1,238 @@
-# SnapBase: Photo to Database Automation System
+# SnapBase: Intelligent Photo to Database Automation System
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-orange.svg)](https://www.sqlalchemy.org/)
+[![Database: MySQL 8.0+](https://img.shields.io/badge/MySQL-8.0%2B-blue.svg)](https://www.mysql.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-SnapBase is an enterprise-grade document extraction, validation, and database ingestion platform. Built on FastAPI, SQLAlchemy 2.0, Tailwind CSS, HTMX, and Alpine.js, it converts unstructured photographs of receipts, invoices, identity cards, and tabular reports into strictly validated, typed relational records with zero emojis and a professional design system.
+SnapBase is an enterprise-grade document extraction, validation, and relational database ingestion platform. Built on FastAPI, SQLAlchemy 2.0, EasyOCR/Tesseract, OpenCV, Pandas, and Tailwind CSS/HTMX, SnapBase transforms unstructured photos of physical documents into normalized, verified business records.
 
 ---
 
-## Key Features
+## Key System Pillars
 
-1. **Multi-Source Document Ingestion**:
-   - Single and batch drag-and-drop file upload (`.jpg`, `.jpeg`, `.png`, `.webp` up to 10MB) with per-file progress tracking.
-   - Built-in webcam snapshot capture.
-   - Background directory watcher (`/inbox -> /processed` or `/failed`).
-2. **Pluggable Dual Extraction Architecture**:
-   - **Google Gemini Multimodal AI** (`google-genai` SDK) returning strict schema JSON.
-   - **Offline Local OCR** (`EasyOCR` + rule-based regex parsing) requiring zero external API keys.
-   - Automated silent fallback from cloud vision to offline OCR upon transient network failure.
-3. **Computer Vision Preprocessing Pipeline**:
-   - EXIF auto-rotation and deskewing via OpenCV minimum area bounding box.
-   - Laplacian variance blur detection with real-time UI quality warnings.
-   - Gaussian denoising and CLAHE (contrast limited adaptive histogram equalization).
-4. **Duplicate Prevention**:
-   - SHA-256 cryptographic image hashing blocks duplicate uploads and provides instant references to existing records.
-5. **Human-in-the-Loop Review & Verification**:
-   - Split-screen verification: pannable and zoomable image viewer (zoom in/out, rotate 90 degrees) on the left, live editable form on the right.
-   - Visual highlighting of low-confidence fields (< 70%) with confidence progress bars.
-   - Keyboard shortcuts (`Ctrl+Enter` to approve, `Esc` to reject).
-   - Editable line items table with add and remove row capabilities.
-6. **Live Records Explorer & Multi-Format Export**:
-   - HTMX-powered live search, multi-field filtering, and sortable columns.
-   - Slide-over detail drawer for rapid document inspection.
-   - Bulk selection with batch delete and export to **CSV**, **Excel (.xlsx)**, and **JSON**.
-7. **Operational Analytics Dashboard**:
-   - Responsive Chart.js visualizations (ingestion volume over time, document status split, schema breakdown).
-   - Real-time KPI summary cards (Total Documents, Approved, Pending Review, Field Accuracy).
+1. **Enterprise Database Architecture (MySQL 8.0+ with Zero-Downtime Fallback)**:
+   - Primary database: MySQL 8.0+ via `mysql-connector-python` using connection pooling.
+   - Resilient startup: If MySQL is unreachable, the system logs a diagnostic message, reflects fallback status on the Settings page, and automatically fails over to a local SQLite database (`data/snapbase.db`) without crashing.
+   - Tests run in an isolated in-memory SQLite database (`sqlite:///:memory:`).
+2. **Strict Data Integrity Boundary**:
+   - Unverified raw OCR output is never directly inserted into confirmed business tables.
+   - Ingested records remain in staging (`documents` table with status `processed`).
+   - Only upon human verification are records promoted to confirmed tables: `receipts` (with line items), `students` (with marks), or `business_cards`.
+3. **Pluggable OCR Architecture**:
+   - **Default Engine**: EasyOCR (character recognition, bounding boxes, word-level confidence).
+   - **Optional Engine**: Tesseract OCR (with automated EasyOCR fallback if the system binary is missing).
+   - **Optional Engine**: Google Gemini Multimodal Vision API.
+4. **Multi-Domain Document Awareness**:
+   - **Receipts / Invoices**: Merchant name, invoice/receipt number, date, phone, line items (qty, price, amount), subtotal, tax, total amount.
+   - **Student Marksheets**: Student name, USN/registration number, college, semester, subject rows (code, marks, max), total, percentage, pass/fail result.
+   - **Business Cards**: Person name, job title, company, phone, email, website, postal address.
+5. **Interactive Computer Vision Playground (`/image-processing`)**:
+   - Side-by-side interactive visual comparison between the original photo and processed outputs.
+   - Real-time adjustment controls: Grayscale, Gaussian Blur, Laplacian Denoising, Morphological Sharpening, Otsu/Adaptive Thresholding, CLAHE Contrast, Auto-Deskew, and Perspective Correction.
+   - On-demand **Run OCR** and **Retry OCR after enhancement** buttons with per-word confidence tags.
+6. **Pandas Data Cleaning Engine**:
+   - Automated whitespace collapse, date standardization to ISO-8601 (`YYYY-MM-DD`), phone number sanitization, email format validation, and currency parsing.
+   - Suspicious and low-confidence field flags preventing erroneous business ledger updates.
+7. **Human-in-the-Loop Split-View Review (`/review`)**:
+   - Interactive zoomable and pannable image viewer on the left; structured editable form on the right.
+   - Confidence meters with visual warnings for fields scoring under 70%.
+   - Keyboard shortcuts: `Ctrl+Enter` to approve and promote to confirmed business tables; `Esc` to reject.
+8. **Live Records Explorer & Formatted Exports (`/records` & `/reports`)**:
+   - HTMX-powered live search and category filtering chips.
+   - Styled Excel (`.xlsx`) generated using OpenPyXL with dark header styling and auto-fitted columns.
+   - CSV, JSON, and text executive summary exports.
 
 ---
 
-## Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client Tier (Frontend)"]
-        UI["Tailwind CSS CDN + HTMX + Alpine.js + Chart.js"]
+    subgraph Client["Client Tier (FastAPI + Jinja2 Templates)"]
+        UI["Tailwind CSS + Alpine.js + HTMX + Chart.js (No Node build required)"]
     end
 
     subgraph Server["Application Server (FastAPI + Uvicorn)"]
-        RouterPages["HTML Router (Jinja2 Templates)"]
-        RouterAPI["REST API Router (/api/documents, /api/stats, /api/export)"]
+        RouterPages["HTML Page Router (app/routers/pages.py)"]
+        RouterAPI["REST API Router (app/routers/api.py)"]
         
         subgraph Services["Service Layer"]
-            DocService["DocumentService"]
-            StatsService["StatsService"]
-            ExportService["ExportService"]
+            DocService["DocumentService (Lifecycle & Promotion)"]
+            ImgService["ImageProcessingService (Playground Previews)"]
+            StatsService["StatsService (Metrics & Aggregations)"]
+            ReportService["ReportService (OpenPyXL Excel & CSV)"]
         end
         
         RouterPages --> DocService
         RouterPages --> StatsService
         RouterAPI --> DocService
+        RouterAPI --> ImgService
         RouterAPI --> StatsService
-        RouterAPI --> ExportService
+        RouterAPI --> ReportService
     end
 
-    subgraph Core["Core Engine"]
-        Preprocess["OpenCV Preprocessor (Denoise, Deskew, Blur Detection)"]
-        Hasher["SHA-256 Duplicate Check"]
-        Extractor{"BaseExtractor Factory"}
-        GeminiExt["GeminiExtractor (Cloud Vision API)"]
-        OCRExt["OCRExtractor (EasyOCR + Regex Engine)"]
-        Normalizer["Field Normalizer (ISO Dates, Currency Floats)"]
-        Validator["Pydantic Validators (Schema Contracts)"]
+    subgraph Core["Core Processing Pipeline"]
+        Preprocess["OpenCV Preprocessor (CLAHE, Denoise, Blur Check, Deskew)"]
+        Hasher["SHA-256 Duplicate Detector"]
+        OCREngines["Extractor Factory (EasyOCR / Tesseract / Gemini)"]
+        PandasCleaner["Pandas Data Cleaner (Dates, Phones, Amounts)"]
+        Validators["Pydantic Schema Validation & Confidence Adjustment"]
+        
+        Hasher --> Preprocess --> OCREngines --> PandasCleaner --> Validators
     end
 
-    subgraph Storage["Persistence Tier"]
-        DB[("SQLite Database (SQLAlchemy 2.0 ORM)")]
-        DiskStorage["Processed Images Directory (data/processed/)"]
+    subgraph Data["Database Persistence Layer"]
+        ResilientEngine["Resilient Connection Router"]
+        MySQL[("MySQL 8.0+ Primary\nphoto_automation")]
+        SQLiteFallback[("SQLite 3 Fallback\ndata/snapbase.db")]
+        
+        ResilientEngine -->|Active Ping OK| MySQL
+        ResilientEngine -->|Connection Fails| SQLiteFallback
     end
 
-    UI --> RouterPages
-    UI --> RouterAPI
-    DocService --> Preprocess
-    Preprocess --> Hasher
-    Hasher --> Extractor
-    Extractor -->|"Primary"| GeminiExt
-    Extractor -->|"Fallback / Local"| OCRExt
-    GeminiExt --> Normalizer
-    OCRExt --> Normalizer
-    Normalizer --> Validator
-    Validator --> DB
-    Preprocess --> DiskStorage
-    StatsService --> DB
-    ExportService --> DB
+    DocService --> Core
+    DocService --> ResilientEngine
+    StatsService --> ResilientEngine
+    ReportService --> ResilientEngine
 ```
 
 ---
 
-## Python Concepts Demonstrated
+## Database Schema (Normalized)
 
-| Python Concept | Source File(s) | Architectural Purpose |
-| :--- | :--- | :--- |
-| **Object-Oriented Programming (OOP)** | [`core/extractor_base.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/extractor_base.py), [`core/gemini_extractor.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/gemini_extractor.py), [`core/ocr_extractor.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/ocr_extractor.py) | Abstract base class (`abc.ABC`), polymorphic `extract()` method, and factory pattern instantiation. |
-| **Pydantic Models & Data Typing** | [`core/validators.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/validators.py), [`app/routers/api.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/routers/api.py) | Schema definition contracts (`BaseModel`), dataclasses (`ProcessResult`), and confidence calculations. |
-| **Service Layer Separation** | [`app/services/`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/services/) | Separation of concerns: routers handle HTTP dispatching, services orchestrate business logic. |
-| **Custom Decorators** | [`core/decorators.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/decorators.py) | `@timed` for latency logging and `@retry` with exponential backoff for network resilience. |
-| **Context Managers** | [`db/session.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/db/session.py), [`app/dependencies.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/dependencies.py) | `@contextmanager` providing transactional sessions with automatic commit/rollback. |
-| **Generators (`yield`)** | [`core/pipeline.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/pipeline.py) | Sequential batch document processing without memory bloat. |
-| **Custom Exception Hierarchy** | [`core/exceptions.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/exceptions.py) | `SnapBaseError` root with `ExtractionError`, `ValidationError`, and `DuplicateImageError`. |
-| **Structured Logging** | [`config/settings.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/config/settings.py) | Dual-target logging (rotating file + console) following 12-factor standards without raw `print()`. |
-| **Functional Tools** | [`core/normalize.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/normalize.py) | Dictionary comprehensions, regex transformations, and type dispatch mappings. |
-| **Automated Testing** | [`tests/`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/tests/) | 48 automated tests covering CRUD, normalization, validation, pipeline, and FastAPI endpoints. |
+Defined in `database/schema.sql` and implemented via SQLAlchemy 2.0 ORM:
 
----
+```mermaid
+erDiagram
+    USERS ||--o{ DOCUMENTS : "uploads"
+    DOCUMENTS ||--o| RECEIPTS : "promotes upon approval"
+    DOCUMENTS ||--o| STUDENTS : "promotes upon approval"
+    DOCUMENTS ||--o| BUSINESS_CARDS : "promotes upon approval"
+    DOCUMENTS ||--o{ PROCESSING_HISTORY : "audit log"
+    RECEIPTS ||--o{ RECEIPT_ITEMS : "has line items"
+    STUDENTS ||--o{ MARKS : "has course marks"
+```
 
-## REST API Overview
-
-Interactive Swagger documentation is available at `http://localhost:8000/docs`.
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/documents` | Ingest and process one or multiple image uploads. |
-| `GET` | `/api/documents` | Search, filter by type/status, sort, and paginate documents. |
-| `GET` | `/api/documents/{id}` | Retrieve full details and extracted fields for a document. |
-| `PATCH` | `/api/documents/{id}` | Update extracted key-value fields for a document. |
-| `POST` | `/api/documents/{id}/approve` | Mark document status as approved/processed. |
-| `POST` | `/api/documents/{id}/reject` | Mark document status as rejected. |
-| `DELETE` | `/api/documents/{id}` | Permanently delete document record and stored image. |
-| `GET` | `/api/stats` | Retrieve operational metrics, KPI totals, and chart history. |
-| `GET` | `/api/export` | Stream dataset export in `csv`, `xlsx`, or `json` formats. |
+1. **`users`**: Authentication credentials and user roles.
+2. **`documents`**: Ingested image path, unique SHA-256 hash, category, raw OCR text, average confidence, status (`uploaded`, `processed`, `verified`, `rejected`, `failed`), and staging JSON payload.
+3. **`receipts` & `receipt_items`**: Confirmed vendor transactions, tax, subtotal, total amount, and line items.
+4. **`students` & `marks`**: Confirmed student identity, USN, college, semester, percentage, result, and individual course marks.
+5. **`business_cards`**: Confirmed professional contact cards.
+6. **`processing_history`**: Audit trail logging every execution step, millisecond duration, and status transition.
 
 ---
 
-## Setup & Execution
+## Application Pages Walkthrough
 
-### 1. Prerequisites & Environment Setup
+1. **Home Dashboard (`/`)**: Operational KPI cards (documents, approved, pending, accuracy), line chart of ingestion trends, donut chart of document distribution, and recent activity logs.
+2. **Upload Documents (`/upload`)**: Drag-and-drop batch upload supporting multiple files, webcam snapshot capture, category selector, and SHA-256 duplicate detection.
+3. **Image Processing Playground (`/image-processing`)**: Side-by-side original vs. filtered image view, enhancement sliders (CLAHE, thresholding, blur, sharpen, deskew), and on-demand OCR re-testing.
+4. **Extracted Information Review (`/review`)**: Human-in-the-loop split screen with pannable/zoomable canvas on the left, editable form fields with confidence meters on the right, and approve/reject actions.
+5. **Database Records (`/records`)**: HTMX live search, category filter chips (`receipts`, `students`, `business_cards`), sortable columns, and detailed record views.
+6. **Analytics (`/analytics`)**: Deep data analytics powered by Chart.js (monthly trends, category split, top merchants by spend, student score distribution).
+7. **Export Reports (`/reports`)**: Date and category filtered report generator exporting to OpenPyXL-formatted Excel spreadsheets, CSV, and summary reports.
+8. **Settings (`/settings`)**: Live database health indicator (`MySQL` or `SQLite Fallback`), OCR engine selection radio group, and confidence threshold configurations.
 
+---
+
+## Installation & Setup
+
+### Prerequisites
+- Python 3.10+
+- (Optional) MySQL Server 8.0+ (If MySQL is not installed or unreachable, SnapBase automatically defaults to local SQLite).
+- (Optional) Tesseract OCR (If uninstalled, SnapBase automatically defaults to EasyOCR).
+
+### 1. Clone the Repository
 ```bash
-# Clone or navigate to the directory
-cd "Photo to database automation system"
+git clone https://github.com/joelmalin13/Photo-to-database-automation-system.git
+cd Photo-to-database-automation-system
+```
 
-# Install dependencies
+### 2. Set Up Virtual Environment & Dependencies
+```bash
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux / macOS:
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment Variables (.env)
-
-```bash
-cp .env.example .env
-```
-
-To enable Gemini Cloud Vision, configure your key in `.env`:
+### 3. Configure Database (.env)
+Create or edit `.env` in the project root:
 ```env
-GEMINI_API_KEY="your-gemini-api-key"
-DEFAULT_ENGINE="gemini"
+# Primary MySQL Configuration
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=photo_automation
+
+DATABASE_URL=mysql+mysqlconnector://root:your_password@localhost:3306/photo_automation
+
+# OCR Preferences
+DEFAULT_ENGINE=ocr
+CONFIDENCE_THRESHOLD=0.70
 ```
-*(Note: If no API key is provided, SnapBase runs 100% locally with EasyOCR without error).*
 
-### 3. Generate Sample Documents
-
+### 4. Initialize MySQL Database (Optional)
+If using MySQL, execute the DDL schema script:
 ```bash
-python sample_data/generate_samples.py
+mysql -u root -p < database/schema.sql
 ```
+*Note: If MySQL is not running, no setup is required! SnapBase will detect this and automatically initialize `data/snapbase.db` using SQLite.*
 
-### 4. Run the Web Application
+---
 
+## Running the Application
+
+Start the FastAPI application via Uvicorn:
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
+Open your browser at:
+- Web Application: **http://127.0.0.1:8000**
+- Interactive Swagger API Documentation: **http://127.0.0.1:8000/docs**
+- ReDoc API Documentation: **http://127.0.0.1:8000/redoc**
 
-The portal will be accessible at `http://localhost:8000`.
+---
 
-### 5. Run the Automated Inbox Watcher
+## Evaluation Benchmark
 
+Run the synthetic evaluation benchmark on the 15 labelled documents (5 receipts, 5 marksheets, 5 business cards):
 ```bash
-# Process all currently queued files once
-python watcher.py --once
-
-# Or run continuous background watcher
-python watcher.py
+python evaluate.py
 ```
+This produces the evaluation report in `docs/evaluation.md`, measuring:
+- **Average OCR Confidence**: The optical character recognition model's internal certainty.
+- **Field-Level Extraction Accuracy**: Percentage of business fields matching ground truth after normalization.
 
-### 6. Run Unit & Integration Tests
+---
 
+## Running the Test Suite
+
+SnapBase includes 52 automated tests covering the API, service layer, image processing, CRUD operations, database resilience, and schema validations:
 ```bash
 python -m pytest tests/ -v
 ```
 
-All 48 tests will execute and pass without error.
+---
+
+## Running with Docker
+
+Build and run using Docker:
+```bash
+docker build -t snapbase .
+docker run -p 8000:8000 snapbase
+```
 
 ---
 
-## Visual Design System
-
-SnapBase implements a clean, accessible SaaS design language:
-- **Font**: Inter (Google Fonts).
-- **Background**: Pure white (`#FFFFFF`) with soft gray surface cards (`#F9FAFB`).
-- **Typography**: Near-black (`#111827`) and muted neutral grays (`#4B5563`, `#6B7280`).
-- **Brand Accent**: One crimson red accent (`#C62828`) reserved for primary buttons, active navigation indicators, and key highlights.
-- **Top / Header Bar**: Deep black (`#111111`) header contrast.
-- **Icons**: Clean Lucide SVG icons (`data-lucide="..."`), strictly avoiding emojis.
-- **Status Badges**:
-  - Green (`bg-emerald-50 text-emerald-700`): Approved / Processed
-  - Amber (`bg-amber-50 text-amber-700`): Pending Verification
-  - Red (`bg-rose-50 text-rose-700`): Rejected
+## Design System Specifications
+- **Typography:** Inter (via Google Fonts).
+- **Color Palette:** Pure white background (`#FFFFFF`), near-black text (`#111827`), subtle gray borders (`#E5E7EB`), red primary accent (`#C62828`), dark top bar/sidebar header (`#111111`).
+- **Icons:** Lucide SVG icons (zero emojis).
+- **Responsive:** Mobile-first layout with collapsible navigation sidebar.

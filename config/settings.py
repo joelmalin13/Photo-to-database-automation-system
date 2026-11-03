@@ -23,8 +23,8 @@ BASE_DIR: Path = Path(__file__).resolve().parent.parent
 CONFIG_DIR: Path = BASE_DIR / "config"
 DATA_DIR: Path = BASE_DIR / "data"
 UPLOAD_DIR: Path = DATA_DIR / "uploads"
+PROCESSED_DIR: Path = DATA_DIR / "processed"
 INBOX_DIR: Path = BASE_DIR / "inbox"
-PROCESSED_DIR: Path = BASE_DIR / "processed"
 FAILED_DIR: Path = BASE_DIR / "failed"
 LOGS_DIR: Path = DATA_DIR / "logs"
 
@@ -32,26 +32,41 @@ LOGS_DIR: Path = DATA_DIR / "logs"
 for directory in (
     DATA_DIR,
     UPLOAD_DIR,
-    INBOX_DIR,
     PROCESSED_DIR,
+    INBOX_DIR,
     FAILED_DIR,
     LOGS_DIR,
 ):
     directory.mkdir(parents=True, exist_ok=True)
 
-# Database settings
-DB_PATH: Path = DATA_DIR / "snapbase.db"
-DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH.as_posix()}")
+# Database credentials & URL configuration
+DB_USER: str = os.getenv("DB_USER", "root")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+DB_HOST: str = os.getenv("DB_HOST", "localhost")
+DB_PORT: str = os.getenv("DB_PORT", "3306")
+DB_NAME: str = os.getenv("DB_NAME", "photo_automation")
 
-# API and Model configurations
-GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-DEFAULT_ENGINE: str = os.getenv(
-    "DEFAULT_ENGINE", "gemini" if GEMINI_API_KEY else "ocr"
+# Default MySQL connection string using mysql-connector-python
+DEFAULT_MYSQL_URL: str = (
+    f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
+# SQLite fallback path
+SQLITE_DB_PATH: Path = DATA_DIR / "snapbase.db"
+DEFAULT_SQLITE_URL: str = f"sqlite:///{SQLITE_DB_PATH.as_posix()}"
+
+# Final configured DATABASE_URL (defaults to MySQL string, checked at runtime in db/session.py)
+DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_MYSQL_URL)
+
+# OCR and Extraction Engine settings
+# Specification: Default engine is EasyOCR; Tesseract & Gemini are optional via settings
+DEFAULT_ENGINE: str = os.getenv("DEFAULT_ENGINE", "ocr")  # 'ocr' (EasyOCR), 'tesseract', or 'gemini'
+GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+TESSERACT_CMD: str | None = os.getenv("TESSERACT_CMD")
+
 # Processing parameters
-CONFIDENCE_THRESHOLD: float = 0.70
+CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.70"))
 MAX_IMAGE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -59,36 +74,33 @@ ALLOWED_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".webp"}
 THEME_PRIMARY: str = "#C62828"
 THEME_SECONDARY: str = "#111111"
 THEME_BACKGROUND: str = "#FFFFFF"
-THEME_TEXT: str = "#1F1F1F"
-THEME_BORDER: str = "#E5E5E5"
-THEME_STATUS_PROCESSED: str = "#2E7D32"
-THEME_STATUS_PENDING: str = "#F57C00"
-THEME_STATUS_REJECTED: str = "#C62828"
+THEME_TEXT: str = "#111827"
+THEME_BORDER: str = "#E5E7EB"
 
 
 class DocumentStatus(str, Enum):
-    """Lifecycle statuses for captured and processed documents."""
+    """Lifecycle statuses matching official specification."""
 
-    PENDING = "pending"
+    UPLOADED = "uploaded"
     PROCESSED = "processed"
+    VERIFIED = "verified"
     REJECTED = "rejected"
+    FAILED = "failed"
+    # Aliases for backwards compatibility with earlier components
+    PENDING = "processed"
 
 
-class DocumentType(str, Enum):
-    """Recognized document classifications."""
+class DocumentCategory(str, Enum):
+    """Normalized document categories matching official schema."""
 
-    RECEIPT_INVOICE = "receipt_invoice"
-    STUDENT_ID_FORM = "student_id_form"
-    GENERIC_TABLE = "generic_table"
-    AUTO = "auto"
+    RECEIPTS = "receipts"
+    STUDENTS = "students"
+    BUSINESS_CARDS = "business_cards"
+    OTHER = "other"
 
 
 def load_schemas() -> Dict[str, Any]:
-    """Load and parse document field schemas from config/schemas.json.
-
-    Returns:
-        Dict[str, Any]: Mapping of document type to its configuration schema.
-    """
+    """Load and parse document field schemas from config/schemas.json."""
     schemas_file = CONFIG_DIR / "schemas.json"
     if not schemas_file.exists():
         raise FileNotFoundError(f"Schema file not found at {schemas_file}")
@@ -97,14 +109,7 @@ def load_schemas() -> Dict[str, Any]:
 
 
 def setup_logger(name: str = "snapbase") -> logging.Logger:
-    """Configure a unified logger with both console and rotating file output.
-
-    Args:
-        name: Name of the logger instance.
-
-    Returns:
-        logging.Logger: Preconfigured logger instance.
-    """
+    """Configure unified logger with both console and rotating file output."""
     logger = logging.getLogger(name)
     if logger.handlers:
         return logger
@@ -115,12 +120,10 @@ def setup_logger(name: str = "snapbase") -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # File handler
     log_file = LOGS_DIR / "snapbase.log"
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)

@@ -120,9 +120,10 @@
         
         <template x-for="st in [
           { key: '', label: 'All' },
-          { key: 'pending', label: 'Pending Review' },
-          { key: 'processed', label: 'Approved' },
-          { key: 'rejected', label: 'Rejected' }
+          { key: 'verified', label: 'Verified & Confirmed' },
+          { key: 'processed', label: 'Pending Review' },
+          { key: 'rejected', label: 'Rejected' },
+          { key: 'failed', label: 'Failed' }
         ]" :key="st.key">
           <button 
             type="button"

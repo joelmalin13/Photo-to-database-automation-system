@@ -1,21 +1,25 @@
 """Orchestrator pipeline connecting validation, preprocessing, extraction, and persistence.
 
 Implements single and generator-based batch document processing workflows
-with automated error fallback and duplicate detection.
+with automated error fallback, duplicate detection, and Pandas data cleaning.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import time
 from typing import Any, Dict, Generator, List, Optional, Tuple
+import uuid
 
 from config.settings import (
+    DocumentCategory,
     DocumentStatus,
     UPLOAD_DIR,
     load_schemas,
     logger,
 )
+from core.cleaner import clean_document_record
 from core.exceptions import (
     ExtractionError,
     PreprocessError,
@@ -40,25 +44,33 @@ class ProcessResult:
     filename: str
     doc_type: str
     image_hash: str
-    status: str = DocumentStatus.PENDING.value
+    status: str = DocumentStatus.PROCESSED.value
     document_id: Optional[int] = None
     image_path: str = ""
     fields: Dict[str, Any] = field(default_factory=dict)
     confidences: Dict[str, float] = field(default_factory=dict)
     line_items: List[Dict[str, Any]] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
-    engine_used: str = "unknown"
+    engine_used: str = "EasyOCR"
     is_duplicate: bool = False
     error_message: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
+    word_confidences: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def _resolve_schema(
     doc_type: str, schemas: Dict[str, Any]
 ) -> Tuple[str, Dict[str, Any]]:
-    """Resolve target document type and retrieve its configuration schema."""
-    target_type = doc_type if doc_type != "auto" else "receipt_invoice"
-    schema = schemas.get(target_type) or schemas.get("receipt_invoice", {})
+    """Resolve target document category and retrieve its configuration schema."""
+    target_type = doc_type if doc_type not in ("auto", "other", None) else "receipts"
+    if target_type == "receipt_invoice":
+        target_type = "receipts"
+    elif target_type in ("student_marksheet", "student_id_form"):
+        target_type = "students"
+    elif target_type == "business_card":
+        target_type = "business_cards"
+
+    schema = schemas.get(target_type) or schemas.get("receipts", {})
     return target_type, schema
 
 
@@ -68,18 +80,18 @@ def _run_extraction_with_fallback(
     target_type: str,
     schema: Dict[str, Any],
 ) -> Tuple[Any, List[str]]:
-    """Execute primary extraction with automated fallback to local OCR upon failure."""
+    """Execute primary extraction with automated fallback to default EasyOCR upon failure."""
     warnings: List[str] = []
     try:
         result = extractor.extract(image_path, target_type, schema)
         return result, warnings
     except Exception as exc:
         logger.warning(
-            "Primary extraction failed: %s. Attempting offline OCR fallback.",
+            "Primary extraction failed: %s. Attempting EasyOCR fallback.",
             exc,
         )
         warnings.append(
-            f"Primary extraction encountered issue ({exc}); used offline OCR fallback."
+            f"Extraction encountered an issue ({exc}); used default EasyOCR fallback."
         )
         from core.ocr_extractor import OCRExtractor
 
@@ -95,7 +107,8 @@ def process_single_image(
     preferred_engine: Optional[str] = None,
     auto_save: bool = True,
 ) -> ProcessResult:
-    """Execute end-to-end processing: validate, hash, preprocess, extract, normalize, save."""
+    """Execute end-to-end processing: validate, hash, preprocess, extract, clean, and save."""
+    start_time = time.time()
     schemas = load_schemas()
     try:
         validate_image_bytes(image_bytes, filename)
@@ -105,7 +118,7 @@ def process_single_image(
             doc_type=doc_type,
             image_hash="",
             error_message=str(err),
-            status=DocumentStatus.REJECTED.value,
+            status=DocumentStatus.FAILED.value,
         )
 
     image_hash = compute_image_hash(image_bytes)
@@ -114,31 +127,33 @@ def process_single_image(
     with get_db_session() as session:
         existing = find_document_by_hash(session, image_hash)
         if existing:
+            raw_data = existing.raw_fields_json or {}
             return ProcessResult(
                 filename=filename,
-                doc_type=existing.type,
+                doc_type=existing.category,
                 image_hash=image_hash,
                 status=existing.status,
                 document_id=existing.id,
                 image_path=existing.image_path,
-                fields={f.key: f.value for f in existing.fields},
-                confidences={f.key: f.confidence for f in existing.fields},
-                line_items=[li.to_dict() for li in existing.line_items],
+                fields=raw_data.get("fields", {}),
+                confidences=raw_data.get("confidences", {}),
+                line_items=raw_data.get("line_items", []),
                 warnings=[
                     f"Duplicate image already ingested on {existing.created_at.strftime('%Y-%m-%d %H:%M')} (ID: #{existing.id})."
                 ],
                 is_duplicate=True,
+                engine_used=raw_data.get("engine_used", "EasyOCR"),
             )
 
-    # Preprocess
-    save_filename = f"{image_hash[:10]}_{Path(filename).name}"
+    # Unique destination filename avoiding overwriting
+    save_filename = f"{uuid.uuid4().hex[:10]}_{Path(filename).name}"
     processed_path = UPLOAD_DIR / save_filename
     _, meta = preprocess_image(image_bytes, processed_path)
 
     warnings: List[str] = []
     if meta.get("is_blurry"):
         warnings.append(
-            f"Image is slightly blurry (Laplacian variance: {meta.get('blur_score')})."
+            f"Image is blurry (Laplacian variance: {meta.get('blur_score')}). Consider recapturing in better lighting."
         )
 
     target_type, schema = _resolve_schema(doc_type, schemas)
@@ -152,12 +167,25 @@ def process_single_image(
         target_type = raw_res.doc_type
         schema = schemas.get(target_type, schema)
 
-    # Normalize & Validate
+    # Normalize fields (Dates, currency floats)
     norm_fields = normalize_fields(raw_res.fields, schema.get("fields", []))
+
+    # Clean data via Pandas pipeline
+    cleaned_fields, clean_warns = clean_document_record(norm_fields, target_type)
+    warnings.extend(clean_warns)
+
+    # Validate against schema contracts & compute confidences
     valid_fields, confidences, val_warnings = validate_extracted_fields(
-        target_type, norm_fields, raw_res.confidences, schema
+        target_type, cleaned_fields, raw_res.confidences, schema
     )
     warnings.extend(val_warnings)
+
+    # Overall OCR average confidence
+    avg_conf = (
+        sum(confidences.values()) / len(confidences) if confidences else 0.75
+    )
+
+    execution_ms = int((time.time() - start_time) * 1000)
 
     doc_id = None
     if auto_save:
@@ -167,11 +195,18 @@ def process_single_image(
                 filename=filename,
                 image_path=str(processed_path),
                 image_hash=image_hash,
-                doc_type=target_type,
-                status=DocumentStatus.PENDING.value,
-                fields=valid_fields,
-                confidences=confidences,
-                line_items=raw_res.line_items,
+                category=target_type,
+                ocr_text=raw_res.raw_text,
+                ocr_confidence=avg_conf,
+                status=DocumentStatus.PROCESSED.value,
+                raw_fields={
+                    "fields": valid_fields,
+                    "confidences": confidences,
+                    "line_items": raw_res.line_items,
+                    "engine_used": raw_res.engine_used,
+                    "word_confidences": raw_res.word_confidences,
+                },
+                execution_time_ms=execution_ms,
             )
             doc_id = doc.id
 
@@ -179,7 +214,7 @@ def process_single_image(
         document_id=doc_id,
         filename=filename,
         doc_type=target_type,
-        status=DocumentStatus.PENDING.value,
+        status=DocumentStatus.PROCESSED.value,
         image_path=str(processed_path),
         image_hash=image_hash,
         fields=valid_fields,
@@ -188,6 +223,7 @@ def process_single_image(
         warnings=warnings,
         engine_used=raw_res.engine_used,
         metadata=meta,
+        word_confidences=raw_res.word_confidences,
     )
 
 
@@ -213,6 +249,6 @@ def batch_process_images(
                 filename=fname,
                 doc_type=doc_type,
                 image_hash="",
-                status=DocumentStatus.REJECTED.value,
+                status=DocumentStatus.FAILED.value,
                 error_message=str(exc),
             )

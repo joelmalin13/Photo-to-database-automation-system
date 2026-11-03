@@ -62,13 +62,13 @@
     </div>
 
     <!-- Navigation Links -->
-    <nav class="flex-1 px-3 py-4 space-y-1">
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
       <a 
         href="/" 
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'dashboard' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
       >
         <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-        <span>Dashboard</span>
+        <span>Home Dashboard</span>
       </a>
 
       <a 
@@ -76,7 +76,15 @@
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'upload' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
       >
         <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-        <span>Upload Photos</span>
+        <span>Upload Documents</span>
+      </a>
+
+      <a 
+        href="/image-processing" 
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'image_processing' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
+      >
+        <i data-lucide="image" class="w-4 h-4"></i>
+        <span>Image Processing</span>
       </a>
 
       <a 
@@ -84,26 +92,42 @@
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'review' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
       >
         <i data-lucide="check-square" class="w-4 h-4"></i>
-        <span>Review & Verify</span>
+        <span>Extracted Info Review</span>
       </a>
 
       <a 
         href="/records" 
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'records' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
       >
-        <i data-lucide="folder-archive" class="w-4 h-4"></i>
-        <span>Records Repository</span>
+        <i data-lucide="database" class="w-4 h-4"></i>
+        <span>Database Records</span>
       </a>
 
-      <div class="pt-4 mt-4 border-t border-gray-800">
-        <div class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Developers</div>
+      <a 
+        href="/analytics" 
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'analytics' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
+      >
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+        <span>Analytics</span>
+      </a>
+
+      <a 
+        href="/reports" 
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors {% if active_page == 'reports' %}bg-gray-800 text-white font-semibold border-l-4 border-brand-red{% else %}text-gray-300 hover:bg-gray-800/60 hover:text-white{% endif %}"
+      >
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        <span>Export Reports</span>
+      </a>
+
+      <div class="pt-3 mt-3 border-t border-gray-800">
+        <div class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">API Documentation</div>
         <a 
           href="/docs" 
           target="_blank"
           class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
         >
           <i data-lucide="code-2" class="w-4 h-4"></i>
-          <span>Swagger API Docs</span>
+          <span>Swagger REST API</span>
         </a>
       </div>
     </nav>
@@ -146,11 +170,17 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Database Health Pill -->
+        <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border {% if db_is_fallback %}bg-amber-50 text-amber-800 border-amber-200{% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
+          <span class="w-2 h-2 rounded-full {% if db_is_fallback %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
+          <span>DB: {{ db_engine }}</span>
+        </div>
+
         <!-- Engine Status Pill -->
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border {% if gemini_active %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-gray-100 text-gray-700 border-gray-200{% endif %}">
-          <span class="w-2 h-2 rounded-full {% if gemini_active %}bg-emerald-500 animate-pulse{% else %}bg-gray-400{% endif %}"></span>
-          <span>Engine: {{ engine_name }}</span>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-700 border-gray-200">
+          <span class="w-2 h-2 rounded-full bg-brand-red"></span>
+          <span>OCR: {{ engine_name }}</span>
         </div>
 
         <!-- Direct Ingest Action -->

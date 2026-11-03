@@ -8,26 +8,111 @@
   <!-- Page Header -->
   <div class="pb-2">
     <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">System Settings</h2>
-    <p class="text-xs text-gray-500 mt-1">Configure extraction engines, AI model parameters, confidence thresholds, and application defaults.</p>
+    <p class="text-xs text-gray-500 mt-1">Configure MySQL database connectivity, OCR extraction engines, verification thresholds, and upload limits.</p>
   </div>
 
   <!-- Form -->
   <form @submit.prevent="saveSettings()" class="space-y-6">
 
-    <!-- Extraction Engine Configuration Card -->
+    <!-- Database Status Card (Specification 1) -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
+            <i data-lucide="database" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-gray-900">Database Engine & Connectivity</h3>
+            <p class="text-xs text-gray-500">MySQL 8.0+ configuration with zero-downtime SQLite automatic fallback.</p>
+          </div>
+        </div>
+
+        <div>
+          {% if db_status.is_fallback %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>SQLite Fallback Active</span>
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>MySQL Connected</span>
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
+          <span class="text-gray-500 block mb-0.5">Active Database Backend</span>
+          <span class="font-bold text-gray-900 font-mono text-sm">{{ db_status.engine_name }}</span>
+        </div>
+
+        <div class="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
+          <span class="text-gray-500 block mb-0.5">Connection URI</span>
+          <span class="font-mono text-gray-800 truncate block">{{ db_status.url_masked }}</span>
+        </div>
+
+        <div class="md:col-span-2 p-3.5 rounded-lg border {% if db_status.is_fallback %}bg-amber-50/50 border-amber-200 text-amber-900{% else %}bg-emerald-50/50 border-emerald-200 text-emerald-900{% endif %}">
+          <span class="font-semibold block mb-1">Status Diagnostic:</span>
+          <span class="text-xs leading-relaxed font-mono">{{ db_status.message }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Extraction Engine Configuration Card (Specification 2) -->
     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
       <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
         <div class="w-8 h-8 rounded-lg bg-red-50 text-brand-red flex items-center justify-center">
           <i data-lucide="cpu" class="w-4 h-4"></i>
         </div>
         <div>
-          <h3 class="text-sm font-bold text-gray-900">Extraction Engine</h3>
+          <h3 class="text-sm font-bold text-gray-900">OCR Recognition Engine</h3>
           <p class="text-xs text-gray-500">Select the primary optical character recognition & extraction pipeline.</p>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Gemini Option -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Option 1: EasyOCR (Default) -->
+        <label 
+          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
+          :class="engine === 'ocr' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <input type="radio" name="engine" value="ocr" x-model="engine" class="text-brand-red focus:ring-brand-red">
+              <span class="text-sm font-bold text-gray-900">EasyOCR</span>
+            </div>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-red text-white">
+              Default
+            </span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">
+            Deep learning CRAFT + ResNet-LSTM engine. Extracts word boxes and per-word confidence scores 100% locally.
+          </p>
+        </label>
+
+        <!-- Option 2: Tesseract OCR (Optional) -->
+        <label 
+          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
+          :class="engine === 'tesseract' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
+        >
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <input type="radio" name="engine" value="tesseract" x-model="engine" class="text-brand-red focus:ring-brand-red">
+              <span class="text-sm font-bold text-gray-900">Tesseract</span>
+            </div>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+              Optional
+            </span>
+          </div>
+          <p class="text-xs text-gray-500 leading-relaxed">
+            Classic open-source optical character engine using Page Segmentation Modes (PSM) and HOCR dictionary parsing.
+          </p>
+        </label>
+
+        <!-- Option 3: Gemini Vision (Optional) -->
         <label 
           class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
           :class="engine === 'gemini' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
@@ -38,93 +123,40 @@
               <span class="text-sm font-bold text-gray-900">Google Gemini</span>
             </div>
             {% if gemini_active %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              API Key Active
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Key Active
             </span>
             {% else %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
-              Key Missing
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+              No Key
             </span>
             {% endif %}
           </div>
           <p class="text-xs text-gray-500 leading-relaxed">
-            Multi-modal cloud LLM for high-accuracy key-value extraction, table parsing, and JSON normalization.
+            Multi-modal cloud vision AI (`gemini-2.5-flash`) for complex structured layout reasoning.
           </p>
         </label>
 
-        <!-- Offline OCR Option -->
-        <label 
-          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
-          :class="engine === 'ocr' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <input type="radio" name="engine" value="ocr" x-model="engine" class="text-brand-red focus:ring-brand-red">
-              <span class="text-sm font-bold text-gray-900">Offline OCR</span>
-            </div>
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-              Local / Air-gapped
-            </span>
-          </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Local EasyOCR + regex entity normalization. Runs 100% on-device with zero external API calls.
-          </p>
-        </label>
-      </div>
-
-      <!-- Engine Parameters -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Gemini Model Identifier</label>
-          <input 
-            type="text" 
-            x-model="model"
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 text-xs focus:ring-2 focus:ring-brand-red focus:border-brand-red font-mono"
-            placeholder="gemini-2.5-flash"
-          >
-          <p class="text-[11px] text-gray-400 mt-1">Recommended: <span class="font-mono">gemini-2.5-flash</span> for high speed and accuracy.</p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-gray-700 mb-1">Gemini API Key</label>
-          <div class="relative">
-            <input 
-              :type="showKey ? 'text' : 'password'" 
-              x-model="apiKey"
-              class="w-full pl-3 pr-10 py-2 rounded-lg border border-gray-300 text-xs focus:ring-2 focus:ring-brand-red focus:border-brand-red font-mono"
-              placeholder="{% if gemini_active %}••••••••••••••••••••••••{% else %}Enter your GEMINI_API_KEY{% endif %}"
-            >
-            <button 
-              type="button" 
-              @click="showKey = !showKey"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <i data-lucide="eye" class="w-4 h-4" x-show="!showKey"></i>
-              <i data-lucide="eye-off" class="w-4 h-4" x-show="showKey" style="display: none;"></i>
-            </button>
-          </div>
-          <p class="text-[11px] text-gray-400 mt-1">API keys are securely read from your local environment or <span class="font-mono">.env</span> file.</p>
-        </div>
       </div>
     </div>
 
-    <!-- Confidence Thresholds Card -->
+    <!-- Confidence Gates & Upload Limits -->
     <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
       <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
         <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
           <i data-lucide="sliders" class="w-4 h-4"></i>
         </div>
         <div>
-          <h3 class="text-sm font-bold text-gray-900">Verification & Confidence Gates</h3>
-          <p class="text-xs text-gray-500">Tune the confidence thresholds that trigger human verification flags.</p>
+          <h3 class="text-sm font-bold text-gray-900">Verification Gates & Upload Limits</h3>
+          <p class="text-xs text-gray-500">Tune the threshold that flags extracted values for human review.</p>
         </div>
       </div>
 
-      <div class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
         <div>
-          <div class="flex items-center justify-between mb-2 text-xs">
+          <div class="flex items-center justify-between mb-2">
             <span class="font-semibold text-gray-700">Minimum Review Threshold</span>
-            <span class="font-mono font-bold text-brand-red" x-text="threshold + '%'"></span>
+            <span class="font-mono font-bold text-brand-red text-sm" x-text="threshold + '%'"></span>
           </div>
           <input 
             type="range" 
@@ -134,62 +166,31 @@
             x-model="threshold"
             class="w-full accent-brand-red cursor-pointer"
           >
-          <div class="flex justify-between text-[11px] text-gray-400 mt-1">
-            <span>40% (Permissive)</span>
-            <span>70% (Standard)</span>
-            <span>95% (Strict)</span>
-          </div>
-          <p class="text-[11px] text-gray-500 mt-2">
-            Documents with extraction confidence below <span class="font-semibold font-mono" x-text="threshold + '%'"></span> will automatically be routed to the Review & Verify queue.
+          <p class="text-[11px] text-gray-400 mt-2">
+            Fields extracted with confidence under <span class="font-semibold text-gray-700" x-text="threshold + '%'"></span> will be highlighted in red with warning badges during review.
           </p>
         </div>
-      </div>
-    </div>
 
-    <!-- System Diagnostics & Environment Card -->
-    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-      <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
-        <div class="w-8 h-8 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">
-          <i data-lucide="hard-drive" class="w-4 h-4"></i>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-gray-900">System Information & Diagnostics</h3>
-          <p class="text-xs text-gray-500">Runtime environment and database storage paths.</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-        <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <span class="text-gray-500 block">Database Engine</span>
-          <span class="font-semibold text-gray-900 font-mono">SQLite (SQLAlchemy 2.0 ORM)</span>
-        </div>
-        <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <span class="text-gray-500 block">Backend Framework</span>
-          <span class="font-semibold text-gray-900 font-mono">FastAPI + Uvicorn Async</span>
-        </div>
-        <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <span class="text-gray-500 block">Vision Preprocessing</span>
-          <span class="font-semibold text-gray-900 font-mono">OpenCV 4.11 (Headless) + Pillow</span>
-        </div>
-        <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
-          <span class="text-gray-500 block">System Health</span>
-          <span class="inline-flex items-center gap-1 font-semibold text-emerald-700">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> All systems operational
-          </span>
+        <div class="p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-2">
+          <span class="font-semibold text-gray-800 block">File Restrictions</span>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Max File Size:</span>
+            <span class="font-mono font-semibold text-gray-900">10 MB</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Supported Formats:</span>
+            <span class="font-mono font-semibold text-gray-900">JPG, JPEG, PNG, WEBP</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Duplicate Check:</span>
+            <span class="font-mono font-semibold text-emerald-700">SHA-256 Digest</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Form Submit -->
     <div class="flex items-center justify-end gap-3 pt-2">
-      <button 
-        type="button" 
-        @click="resetDefaults()"
-        class="px-4 py-2 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        Reset Defaults
-      </button>
-
       <button 
         type="submit" 
         class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red-hover transition-colors shadow-sm"
@@ -207,8 +208,6 @@
       engine: '{{ engine }}',
       model: '{{ model }}',
       threshold: {{ threshold }},
-      apiKey: '',
-      showKey: false,
 
       init() {
         if (window.lucide) {
@@ -217,15 +216,7 @@
       },
 
       saveSettings() {
-        // Show success notification
-        showToast('Settings updated successfully', 'success');
-      },
-
-      resetDefaults() {
-        this.engine = 'gemini';
-        this.model = 'gemini-2.5-flash';
-        this.threshold = 70;
-        showToast('Reset to system defaults', 'info');
+        showToast('Settings saved successfully', 'success');
       }
     };
   }

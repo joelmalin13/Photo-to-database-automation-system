@@ -1,153 +1,193 @@
 {
-  "receipt_invoice": {
-    "display_name": "Receipt / Invoice",
-    "description": "Commercial receipts, sales slips, and purchase invoices.",
+  "receipts": {
+    "name": "Receipts & Bills",
+    "description": "Retail receipts, restaurant bills, and commercial purchase invoices.",
     "fields": [
       {
-        "key": "vendor_name",
-        "label": "Vendor / Merchant",
+        "key": "shop_name",
+        "label": "Shop / Merchant Name",
         "type": "string",
         "required": true,
-        "description": "Store, business, or vendor name at the top of the receipt.",
-        "regex_patterns": ["(?:merchant|store|vendor|from)[:\\s]*([^\\n\\r,]+)", "^([A-Z][A-Za-z0-9&\\s]{3,35})(?=\\n)"]
+        "description": "Store, business, or merchant name.",
+        "regex_patterns": ["(?:merchant|store|shop|vendor|from)[:\\s]*([^\\n\\r,]+)", "^([A-Z][A-Za-z0-9&\\s]{3,35})(?=\\n)"]
       },
       {
-        "key": "invoice_number",
-        "label": "Invoice / Receipt #",
+        "key": "receipt_number",
+        "label": "Receipt / Invoice #",
         "type": "string",
         "required": false,
-        "description": "Invoice number, receipt number, order ID, or reference code.",
-        "regex_patterns": ["(?:inv|invoice|receipt|order|ref|bill)[\\s#.:-]*([A-Za-z0-9-]+)"]
+        "description": "Receipt number, bill ID, invoice #, or transaction code.",
+        "regex_patterns": ["(?:bill|receipt|inv|invoice|order)[\\s#.:-]*([A-Za-z0-9-]+)"]
       },
       {
         "key": "date",
-        "label": "Date",
+        "label": "Transaction Date",
         "type": "date",
         "required": true,
-        "description": "Transaction date (YYYY-MM-DD format).",
+        "description": "Date of transaction (YYYY-MM-DD).",
         "regex_patterns": ["(\\b\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}\\b)", "(\\b\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}\\b)", "([A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})"]
+      },
+      {
+        "key": "phone",
+        "label": "Store Contact Phone",
+        "type": "phone",
+        "required": false,
+        "description": "Shop telephone or mobile number.",
+        "regex_patterns": ["(?:tel|phone|ph|mobile|call)[:\\s]*([+0-9\\s()-]{7,18})"]
+      },
+      {
+        "key": "subtotal",
+        "label": "Subtotal",
+        "type": "float",
+        "required": false,
+        "description": "Amount before taxes.",
+        "regex_patterns": ["(?:subtotal|sub-total|sub total)[^\\d]*([0-9]+[.,][0-9]{2})"]
+      },
+      {
+        "key": "tax_amount",
+        "label": "GST / Tax Amount",
+        "type": "float",
+        "required": false,
+        "description": "GST, VAT, or sales tax charged.",
+        "regex_patterns": ["(?:gst|tax|vat|sales tax)[^\\d]*([0-9]+[.,][0-9]{2})"]
       },
       {
         "key": "total_amount",
         "label": "Total Amount",
         "type": "float",
         "required": true,
-        "description": "Grand total bill amount including tax.",
-        "regex_patterns": ["(?:total|grand total|amount due|balance due|net amount)[^\\d]*[$€£]?\\s*([0-9]+[.,][0-9]{2})"]
+        "description": "Grand total bill amount.",
+        "regex_patterns": ["(?:total|grand total|net amount|amount due)[^\\d]*[$€£₹]?\\s*([0-9]+[.,][0-9]{2})"]
+      }
+    ],
+    "supports_items": true,
+    "item_fields": ["item_name", "quantity", "unit_price", "total_price"]
+  },
+  "students": {
+    "name": "Student Marksheets",
+    "description": "Academic marksheets, semester grade cards, and scorecards.",
+    "fields": [
+      {
+        "key": "name",
+        "label": "Student Name",
+        "type": "string",
+        "required": true,
+        "description": "Full name of the student.",
+        "regex_patterns": ["(?:name|student name|candidate name)[:\\s]*([A-Za-z\\s.'-]+)"]
       },
       {
-        "key": "tax_amount",
-        "label": "Tax / VAT",
+        "key": "usn",
+        "label": "USN / Registration Number",
+        "type": "string",
+        "required": true,
+        "description": "University seat number, registration ID, or roll number.",
+        "regex_patterns": ["(?:usn|reg no|roll no|registration no|id)[.:\\s]*([A-Za-z0-9-]+)"]
+      },
+      {
+        "key": "college",
+        "label": "College / University",
+        "type": "string",
+        "required": false,
+        "description": "College, institution, or university name.",
+        "regex_patterns": ["(?:college|institute|university|school)[:\\s]*([A-Za-z0-9\\s.'-]+)", "^([A-Z\\s]{4,40}COLLEGE|[A-Z\\s]{4,40}INSTITUTE|[A-Z\\s]{4,40}UNIVERSITY)"]
+      },
+      {
+        "key": "semester",
+        "label": "Semester / Year",
+        "type": "string",
+        "required": false,
+        "description": "Academic semester or term (e.g. 5th Sem, Sem VI).",
+        "regex_patterns": ["(?:sem|semester|term)[:\\s]*([0-9a-zA-Z\\s-]+)"]
+      },
+      {
+        "key": "total_marks",
+        "label": "Total Marks",
         "type": "float",
         "required": false,
-        "description": "Sales tax, VAT, or GST amount.",
-        "regex_patterns": ["(?:tax|vat|gst|sales tax)[^\\d]*[$€£]?\\s*([0-9]+[.,][0-9]{2})"]
+        "description": "Total marks obtained across all subjects.",
+        "regex_patterns": ["(?:total marks|grand total|total score)[:\\s]*([0-9]+(?:\\.[0-9]{1,2})?)"]
       },
       {
-        "key": "payment_method",
-        "label": "Payment Method",
+        "key": "percentage",
+        "label": "Percentage / CGPA",
+        "type": "float",
+        "required": false,
+        "description": "Aggregate score percentage or GPA.",
+        "regex_patterns": ["(?:percentage|percent|cgpa|gpa)[:\\s]*([0-9]+(?:\\.[0-9]{1,2})?)%?"]
+      },
+      {
+        "key": "result",
+        "label": "Academic Result",
         "type": "string",
         "required": false,
-        "description": "Card, Cash, UPI, Bank Transfer, or check.",
-        "regex_patterns": ["(?:paid by|method|payment|tendered)[:\\s]*([A-Za-z\\s]+)"]
+        "description": "Passing grade or distinction (PASS, FAIL, DISTINCTION).",
+        "regex_patterns": ["(?:result|class|grade)[:\\s]*([A-Za-z\\s]+)"]
       }
     ],
-    "supports_line_items": true,
-    "line_item_columns": ["description", "quantity", "unit_price", "amount"]
+    "supports_items": true,
+    "item_fields": ["subject_name", "subject_code", "marks_obtained", "max_marks"]
   },
-  "student_id_form": {
-    "display_name": "Student / ID Form",
-    "description": "Identification cards, student registration forms, and credential records.",
+  "business_cards": {
+    "name": "Business Cards",
+    "description": "Corporate visiting cards and business identity cards.",
     "fields": [
       {
-        "key": "full_name",
-        "label": "Full Name",
+        "key": "person_name",
+        "label": "Person Name",
         "type": "string",
         "required": true,
-        "description": "Full name of the student or cardholder.",
-        "regex_patterns": ["(?:name|student name|cardholder)[:\\s]*([A-Za-z\\s.'-]+)"]
+        "description": "Full name of the contact person.",
+        "regex_patterns": ["^([A-Z][a-z]+(?:\\s+[A-Z][a-z]+)+)", "(?:name)[:\\s]*([A-Za-z\\s.'-]+)"]
       },
       {
-        "key": "id_number",
-        "label": "ID / Roll Number",
-        "type": "string",
-        "required": true,
-        "description": "Identification number, roll number, or badge code.",
-        "regex_patterns": ["(?:id|id no|roll no|reg no|student id)[.:\\s]*([A-Za-z0-9-]+)"]
-      },
-      {
-        "key": "date_of_birth",
-        "label": "Date of Birth",
-        "type": "date",
-        "required": false,
-        "description": "Date of birth in YYYY-MM-DD format.",
-        "regex_patterns": ["(?:dob|birth date|date of birth)[:\\s]*(\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4})"]
-      },
-      {
-        "key": "institution",
-        "label": "Institution / Org",
-        "type": "string",
-        "required": true,
-        "description": "University, college, school, or issuing organization.",
-        "regex_patterns": ["(?:university|college|school|institute|academy|dept)[:\\s]*([A-Za-z0-9\\s.'-]+)", "^([A-Z\\s]{4,40}UNIVERSITY|[A-Z\\s]{4,40}COLLEGE|[A-Z\\s]{4,40}SCHOOL)"]
-      },
-      {
-        "key": "valid_until",
-        "label": "Valid Until / Expiry",
-        "type": "date",
-        "required": false,
-        "description": "Expiration date or valid through date.",
-        "regex_patterns": ["(?:valid until|expires|exp date|expiry)[:\\s]*(\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4})"]
-      },
-      {
-        "key": "blood_group",
-        "label": "Blood Group",
+        "key": "designation",
+        "label": "Designation / Role",
         "type": "string",
         "required": false,
-        "description": "Blood group code (e.g., A+, O-, B+).",
-        "regex_patterns": ["(?:blood|blood group|b.g.)[:\\s]*([ABO][+-])"]
+        "description": "Job title or position.",
+        "regex_patterns": ["(?:designation|role|title|position)[:\\s]*([A-Za-z\\s,-]+)", "(?:director|manager|engineer|consultant|lead|founder|ceo|cto)"]
+      },
+      {
+        "key": "company_name",
+        "label": "Company / Organization",
+        "type": "string",
+        "required": false,
+        "description": "Organization or firm name.",
+        "regex_patterns": ["(?:company|organization|firm)[:\\s]*([A-Za-z0-9&\\s.'-]+)", "(?:Inc|Ltd|LLC|Corp|Technologies|Solutions|Group)"]
+      },
+      {
+        "key": "phone",
+        "label": "Phone Number",
+        "type": "phone",
+        "required": false,
+        "description": "Direct phone or mobile contact.",
+        "regex_patterns": ["(?:tel|phone|ph|mob|call)[:\\s]*([+0-9\\s()-]{7,18})", "(\\+?\\d{1,3}[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4})"]
+      },
+      {
+        "key": "email",
+        "label": "Email Address",
+        "type": "email",
+        "required": false,
+        "description": "Official or personal email address.",
+        "regex_patterns": ["([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+)"]
+      },
+      {
+        "key": "website",
+        "label": "Website URL",
+        "type": "url",
+        "required": false,
+        "description": "Company or personal website domain.",
+        "regex_patterns": ["(?:www\\.[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+|https?://[^\\s]+)"]
+      },
+      {
+        "key": "address",
+        "label": "Address / Location",
+        "type": "string",
+        "required": false,
+        "description": "Office or mailing address.",
+        "regex_patterns": ["(?:address|location|office)[:\\s]*([^\\n\\r]+)"]
       }
     ],
-    "supports_line_items": false
-  },
-  "generic_table": {
-    "display_name": "Generic Table",
-    "description": "Tabular documents, price lists, rosters, and schedules.",
-    "fields": [
-      {
-        "key": "table_title",
-        "label": "Table / Sheet Title",
-        "type": "string",
-        "required": true,
-        "description": "Title or header of the document or table.",
-        "regex_patterns": ["^([A-Z0-9\\s_-]{4,40})(?=\\n)", "(?:title|report|table)[:\\s]*([A-Za-z0-9\\s_-]+)"]
-      },
-      {
-        "key": "record_date",
-        "label": "Record Date",
-        "type": "date",
-        "required": false,
-        "description": "Date associated with the table report.",
-        "regex_patterns": ["(\\b\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}\\b)", "(\\b\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}\\b)"]
-      },
-      {
-        "key": "total_rows",
-        "label": "Total Rows Detected",
-        "type": "integer",
-        "required": false,
-        "description": "Count of data rows in the table.",
-        "regex_patterns": ["(?:total rows|rows|items count)[:\\s]*(\\d+)"]
-      },
-      {
-        "key": "summary_notes",
-        "label": "Summary / Notes",
-        "type": "string",
-        "required": false,
-        "description": "Remarks, notes, or column summary.",
-        "regex_patterns": ["(?:notes|summary|remarks)[:\\s]*([A-Za-z0-9\\s.,-]+)"]
-      }
-    ],
-    "supports_line_items": true,
-    "line_item_columns": ["col_1", "col_2", "col_3", "col_4"]
+    "supports_items": false
   }
 }
