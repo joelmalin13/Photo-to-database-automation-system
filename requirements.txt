@@ -1,0 +1,29 @@
+# Core Web and UI
+streamlit>=1.35.0
+pandas>=2.2.0
+plotly>=5.22.0
+openpyxl>=3.1.2
+
+# Database and Persistence
+sqlalchemy>=2.0.0
+
+# Schema Validation and Typing
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+
+# Computer Vision and Imaging
+opencv-python>=4.9.0
+pillow>=10.3.0
+
+# Extraction Engines
+google-genai>=0.1.0
+easyocr>=1.7.0
+torch>=2.2.0
+torchvision>=0.17.0
+
+# File System Monitoring
+watchdog>=4.0.0
+
+# Testing and Code Quality
+pytest>=8.2.0
+python-dateutil>=2.9.0

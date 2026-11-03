@@ -1,0 +1,153 @@
+{
+  "receipt_invoice": {
+    "display_name": "Receipt / Invoice",
+    "description": "Commercial receipts, sales slips, and purchase invoices.",
+    "fields": [
+      {
+        "key": "vendor_name",
+        "label": "Vendor / Merchant",
+        "type": "string",
+        "required": true,
+        "description": "Store, business, or vendor name at the top of the receipt.",
+        "regex_patterns": ["(?:merchant|store|vendor|from)[:\\s]*([^\\n\\r,]+)", "^([A-Z][A-Za-z0-9&\\s]{3,35})(?=\\n)"]
+      },
+      {
+        "key": "invoice_number",
+        "label": "Invoice / Receipt #",
+        "type": "string",
+        "required": false,
+        "description": "Invoice number, receipt number, order ID, or reference code.",
+        "regex_patterns": ["(?:inv|invoice|receipt|order|ref|bill)[\\s#.:-]*([A-Za-z0-9-]+)"]
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "date",
+        "required": true,
+        "description": "Transaction date (YYYY-MM-DD format).",
+        "regex_patterns": ["(\\b\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}\\b)", "(\\b\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}\\b)", "([A-Za-z]{3,9}\\s+\\d{1,2},?\\s+\\d{4})"]
+      },
+      {
+        "key": "total_amount",
+        "label": "Total Amount",
+        "type": "float",
+        "required": true,
+        "description": "Grand total bill amount including tax.",
+        "regex_patterns": ["(?:total|grand total|amount due|balance due|net amount)[^\\d]*[$€£]?\\s*([0-9]+[.,][0-9]{2})"]
+      },
+      {
+        "key": "tax_amount",
+        "label": "Tax / VAT",
+        "type": "float",
+        "required": false,
+        "description": "Sales tax, VAT, or GST amount.",
+        "regex_patterns": ["(?:tax|vat|gst|sales tax)[^\\d]*[$€£]?\\s*([0-9]+[.,][0-9]{2})"]
+      },
+      {
+        "key": "payment_method",
+        "label": "Payment Method",
+        "type": "string",
+        "required": false,
+        "description": "Card, Cash, UPI, Bank Transfer, or check.",
+        "regex_patterns": ["(?:paid by|method|payment|tendered)[:\\s]*([A-Za-z\\s]+)"]
+      }
+    ],
+    "supports_line_items": true,
+    "line_item_columns": ["description", "quantity", "unit_price", "amount"]
+  },
+  "student_id_form": {
+    "display_name": "Student / ID Form",
+    "description": "Identification cards, student registration forms, and credential records.",
+    "fields": [
+      {
+        "key": "full_name",
+        "label": "Full Name",
+        "type": "string",
+        "required": true,
+        "description": "Full name of the student or cardholder.",
+        "regex_patterns": ["(?:name|student name|cardholder)[:\\s]*([A-Za-z\\s.'-]+)"]
+      },
+      {
+        "key": "id_number",
+        "label": "ID / Roll Number",
+        "type": "string",
+        "required": true,
+        "description": "Identification number, roll number, or badge code.",
+        "regex_patterns": ["(?:id|id no|roll no|reg no|student id)[.:\\s]*([A-Za-z0-9-]+)"]
+      },
+      {
+        "key": "date_of_birth",
+        "label": "Date of Birth",
+        "type": "date",
+        "required": false,
+        "description": "Date of birth in YYYY-MM-DD format.",
+        "regex_patterns": ["(?:dob|birth date|date of birth)[:\\s]*(\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4})"]
+      },
+      {
+        "key": "institution",
+        "label": "Institution / Org",
+        "type": "string",
+        "required": true,
+        "description": "University, college, school, or issuing organization.",
+        "regex_patterns": ["(?:university|college|school|institute|academy|dept)[:\\s]*([A-Za-z0-9\\s.'-]+)", "^([A-Z\\s]{4,40}UNIVERSITY|[A-Z\\s]{4,40}COLLEGE|[A-Z\\s]{4,40}SCHOOL)"]
+      },
+      {
+        "key": "valid_until",
+        "label": "Valid Until / Expiry",
+        "type": "date",
+        "required": false,
+        "description": "Expiration date or valid through date.",
+        "regex_patterns": ["(?:valid until|expires|exp date|expiry)[:\\s]*(\\d{1,4}[-/.]\\d{1,2}[-/.]\\d{1,4})"]
+      },
+      {
+        "key": "blood_group",
+        "label": "Blood Group",
+        "type": "string",
+        "required": false,
+        "description": "Blood group code (e.g., A+, O-, B+).",
+        "regex_patterns": ["(?:blood|blood group|b.g.)[:\\s]*([ABO][+-])"]
+      }
+    ],
+    "supports_line_items": false
+  },
+  "generic_table": {
+    "display_name": "Generic Table",
+    "description": "Tabular documents, price lists, rosters, and schedules.",
+    "fields": [
+      {
+        "key": "table_title",
+        "label": "Table / Sheet Title",
+        "type": "string",
+        "required": true,
+        "description": "Title or header of the document or table.",
+        "regex_patterns": ["^([A-Z0-9\\s_-]{4,40})(?=\\n)", "(?:title|report|table)[:\\s]*([A-Za-z0-9\\s_-]+)"]
+      },
+      {
+        "key": "record_date",
+        "label": "Record Date",
+        "type": "date",
+        "required": false,
+        "description": "Date associated with the table report.",
+        "regex_patterns": ["(\\b\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}\\b)", "(\\b\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}\\b)"]
+      },
+      {
+        "key": "total_rows",
+        "label": "Total Rows Detected",
+        "type": "integer",
+        "required": false,
+        "description": "Count of data rows in the table.",
+        "regex_patterns": ["(?:total rows|rows|items count)[:\\s]*(\\d+)"]
+      },
+      {
+        "key": "summary_notes",
+        "label": "Summary / Notes",
+        "type": "string",
+        "required": false,
+        "description": "Remarks, notes, or column summary.",
+        "regex_patterns": ["(?:notes|summary|remarks)[:\\s]*([A-Za-z0-9\\s.,-]+)"]
+      }
+    ],
+    "supports_line_items": true,
+    "line_item_columns": ["col_1", "col_2", "col_3", "col_4"]
+  }
+}

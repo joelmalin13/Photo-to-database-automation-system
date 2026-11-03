@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Secrets & Environment variables
+.env
+.env.local
+.env.*.local
+
+# SnapBase runtime data & SQLite database
+data/snapbase.db
+data/logs/*.log
+data/uploads/*
+!data/uploads/.gitkeep
+
+# Test & coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary directories
+inbox/*
+!inbox/.gitkeep
+processed/*
+!processed/.gitkeep
+failed/*
+!failed/.gitkeep
+
+# OS generated files
+Thumbs.db
+[Dd]esktop.ini
+.DS_Store
