@@ -1,1 +1,0 @@
-"""SnapBase UI package."""

@@ -1,0 +1,1 @@
+"""SnapBase FastAPI Application Package."""

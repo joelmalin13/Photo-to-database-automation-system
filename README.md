@@ -1,87 +1,139 @@
 # SnapBase: Photo to Database Automation System
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.35%2B-red.svg)](https://streamlit.io/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B-orange.svg)](https://www.sqlalchemy.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-SnapBase is an enterprise-grade document extraction, validation, and database ingestion system. It converts unstructured photographs of receipts, invoices, student IDs, and tabular reports into strictly validated, typed relational records.
+SnapBase is an enterprise-grade document extraction, validation, and database ingestion platform. Built on FastAPI, SQLAlchemy 2.0, Tailwind CSS, HTMX, and Alpine.js, it converts unstructured photographs of receipts, invoices, identity cards, and tabular reports into strictly validated, typed relational records with zero emojis and a professional design system.
 
 ---
 
-## 🌟 Key Features
+## Key Features
 
-1. **Multi-Source Ingestion**:
-   - Single & batch file upload (`.jpg`, `.jpeg`, `.png`, `.webp` up to 10MB).
-   - Real-time webcam snapshot capture.
+1. **Multi-Source Document Ingestion**:
+   - Single and batch drag-and-drop file upload (`.jpg`, `.jpeg`, `.png`, `.webp` up to 10MB) with per-file progress tracking.
+   - Built-in webcam snapshot capture.
    - Background directory watcher (`/inbox -> /processed` or `/failed`).
-2. **Pluggable Dual Extraction Engine**:
-   - **Gemini Vision Multimodal API** (`google-genai` SDK) returning strict schema JSON.
-   - **Offline Local OCR** (`EasyOCR` + rule-based regex parsing), requiring zero external API keys.
+2. **Pluggable Dual Extraction Architecture**:
+   - **Google Gemini Multimodal AI** (`google-genai` SDK) returning strict schema JSON.
+   - **Offline Local OCR** (`EasyOCR` + rule-based regex parsing) requiring zero external API keys.
    - Automated silent fallback from cloud vision to offline OCR upon transient network failure.
-3. **Computer Vision Preprocessing**:
+3. **Computer Vision Preprocessing Pipeline**:
    - EXIF auto-rotation and deskewing via OpenCV minimum area bounding box.
    - Laplacian variance blur detection with real-time UI quality warnings.
-   - Gaussian denoising and CLAHE (adaptive histogram equalization).
+   - Gaussian denoising and CLAHE (contrast limited adaptive histogram equalization).
 4. **Duplicate Prevention**:
-   - SHA-256 cryptographic hashing blocks duplicate images and provides existing record links.
-5. **Human-in-the-Loop Review**:
-   - Side-by-side original photo inspection and live editable form.
-   - Visual highlighting of low-confidence fields (< 70%).
-   - Approve, Save Edits, and Reject workflows.
-6. **Search & Multi-Format Export**:
-   - Full-text search and filtering by document type, review status, and timestamp.
-   - Export filtered datasets to **CSV**, **Excel (.xlsx)**, and **JSON** with a single click.
-7. **Operational Analytics**:
-   - Interactive Plotly visualizations (status distribution, volume by category, zero-edit automation accuracy).
+   - SHA-256 cryptographic image hashing blocks duplicate uploads and provides instant references to existing records.
+5. **Human-in-the-Loop Review & Verification**:
+   - Split-screen verification: pannable and zoomable image viewer (zoom in/out, rotate 90 degrees) on the left, live editable form on the right.
+   - Visual highlighting of low-confidence fields (< 70%) with confidence progress bars.
+   - Keyboard shortcuts (`Ctrl+Enter` to approve, `Esc` to reject).
+   - Editable line items table with add and remove row capabilities.
+6. **Live Records Explorer & Multi-Format Export**:
+   - HTMX-powered live search, multi-field filtering, and sortable columns.
+   - Slide-over detail drawer for rapid document inspection.
+   - Bulk selection with batch delete and export to **CSV**, **Excel (.xlsx)**, and **JSON**.
+7. **Operational Analytics Dashboard**:
+   - Responsive Chart.js visualizations (ingestion volume over time, document status split, schema breakdown).
+   - Real-time KPI summary cards (Total Documents, Approved, Pending Review, Field Accuracy).
 
 ---
 
-## 🏗️ Architecture Diagram
+## Architecture
 
 ```mermaid
 flowchart TD
-    A["Uploaded Image / Camera / Inbox"] --> B["Image Preprocessing (OpenCV)"]
-    B --> B1["SHA-256 Hashing & Duplicate Check"]
-    B --> B2["Laplacian Blur Scoring"]
-    B --> B3["Deskew, Denoise & CLAHE"]
-    
-    B3 --> C{"Extraction Engine"}
-    C -->|"Primary (Cloud)"| D["Gemini Multimodal API (Strict JSON)"]
-    C -->|"Fallback / Offline"| E["EasyOCR + Regex Pattern Engine"]
-    D -.->|"On Failure / Timeout"| E
-    
-    D --> F["Field Normalization (ISO Dates, Floats)"]
-    E --> F
-    
-    F --> G["Pydantic Schema Validation & Scoring"]
-    G --> H[("SQLite / SQLAlchemy Database")]
-    
-    H --> I["Human Verification Page (Review)"]
-    I -->|"Approve / Edit"| H
-    H --> J["Records Explorer & Multi-Format Export"]
-    H --> K["Analytics Dashboard (Plotly)"]
+    subgraph Client["Client Tier (Frontend)"]
+        UI["Tailwind CSS CDN + HTMX + Alpine.js + Chart.js"]
+    end
+
+    subgraph Server["Application Server (FastAPI + Uvicorn)"]
+        RouterPages["HTML Router (Jinja2 Templates)"]
+        RouterAPI["REST API Router (/api/documents, /api/stats, /api/export)"]
+        
+        subgraph Services["Service Layer"]
+            DocService["DocumentService"]
+            StatsService["StatsService"]
+            ExportService["ExportService"]
+        end
+        
+        RouterPages --> DocService
+        RouterPages --> StatsService
+        RouterAPI --> DocService
+        RouterAPI --> StatsService
+        RouterAPI --> ExportService
+    end
+
+    subgraph Core["Core Engine"]
+        Preprocess["OpenCV Preprocessor (Denoise, Deskew, Blur Detection)"]
+        Hasher["SHA-256 Duplicate Check"]
+        Extractor{"BaseExtractor Factory"}
+        GeminiExt["GeminiExtractor (Cloud Vision API)"]
+        OCRExt["OCRExtractor (EasyOCR + Regex Engine)"]
+        Normalizer["Field Normalizer (ISO Dates, Currency Floats)"]
+        Validator["Pydantic Validators (Schema Contracts)"]
+    end
+
+    subgraph Storage["Persistence Tier"]
+        DB[("SQLite Database (SQLAlchemy 2.0 ORM)")]
+        DiskStorage["Processed Images Directory (data/processed/)"]
+    end
+
+    UI --> RouterPages
+    UI --> RouterAPI
+    DocService --> Preprocess
+    Preprocess --> Hasher
+    Hasher --> Extractor
+    Extractor -->|"Primary"| GeminiExt
+    Extractor -->|"Fallback / Local"| OCRExt
+    GeminiExt --> Normalizer
+    OCRExt --> Normalizer
+    Normalizer --> Validator
+    Validator --> DB
+    Preprocess --> DiskStorage
+    StatsService --> DB
+    ExportService --> DB
 ```
 
 ---
 
-## 🐍 Python Concepts Demonstrated
+## Python Concepts Demonstrated
 
 | Python Concept | Source File(s) | Architectural Purpose |
 | :--- | :--- | :--- |
 | **Object-Oriented Programming (OOP)** | [`core/extractor_base.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/extractor_base.py), [`core/gemini_extractor.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/gemini_extractor.py), [`core/ocr_extractor.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/ocr_extractor.py) | Abstract base class (`abc.ABC`), polymorphic `extract()` method, and factory pattern instantiation. |
-| **Pydantic Models & Data Typing** | [`core/validators.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/validators.py), [`core/pipeline.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/pipeline.py) | Schema definition contracts (`BaseModel`), dataclasses (`ProcessResult`), and confidence calculations. |
+| **Pydantic Models & Data Typing** | [`core/validators.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/validators.py), [`app/routers/api.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/routers/api.py) | Schema definition contracts (`BaseModel`), dataclasses (`ProcessResult`), and confidence calculations. |
+| **Service Layer Separation** | [`app/services/`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/services/) | Separation of concerns: routers handle HTTP dispatching, services orchestrate business logic. |
 | **Custom Decorators** | [`core/decorators.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/decorators.py) | `@timed` for latency logging and `@retry` with exponential backoff for network resilience. |
-| **Context Managers** | [`db/session.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/db/session.py) | `@contextmanager` providing transactional sessions with automatic commit/rollback. |
-| **Generators (`yield`)** | [`core/pipeline.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/pipeline.py) | Sequential batch document processing without memory bloat or UI thread lockup. |
+| **Context Managers** | [`db/session.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/db/session.py), [`app/dependencies.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/app/dependencies.py) | `@contextmanager` providing transactional sessions with automatic commit/rollback. |
+| **Generators (`yield`)** | [`core/pipeline.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/pipeline.py) | Sequential batch document processing without memory bloat. |
 | **Custom Exception Hierarchy** | [`core/exceptions.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/exceptions.py) | `SnapBaseError` root with `ExtractionError`, `ValidationError`, and `DuplicateImageError`. |
-| **Structured Logging** | [`config/settings.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/config/settings.py) | Dual-target logging (rotating file + console) following 12-factor application standards (no `print()`). |
-| **Functional Tools** | [`core/normalize.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/normalize.py) | Dictionary comprehensions, regex transformations, and type dispatch dictionaries. |
-| **Automated Testing** | [`tests/`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/tests/) | `pytest` fixtures for in-memory SQLite isolation and `@pytest.mark.parametrize`. |
+| **Structured Logging** | [`config/settings.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/config/settings.py) | Dual-target logging (rotating file + console) following 12-factor standards without raw `print()`. |
+| **Functional Tools** | [`core/normalize.py`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/core/normalize.py) | Dictionary comprehensions, regex transformations, and type dispatch mappings. |
+| **Automated Testing** | [`tests/`](file:///c:/MY%20PROJECTS/Photo%20to%20database%20automation%20system/tests/) | 48 automated tests covering CRUD, normalization, validation, pipeline, and FastAPI endpoints. |
 
 ---
 
-## 🚀 Setup & Execution
+## REST API Overview
+
+Interactive Swagger documentation is available at `http://localhost:8000/docs`.
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/documents` | Ingest and process one or multiple image uploads. |
+| `GET` | `/api/documents` | Search, filter by type/status, sort, and paginate documents. |
+| `GET` | `/api/documents/{id}` | Retrieve full details and extracted fields for a document. |
+| `PATCH` | `/api/documents/{id}` | Update extracted key-value fields for a document. |
+| `POST` | `/api/documents/{id}/approve` | Mark document status as approved/processed. |
+| `POST` | `/api/documents/{id}/reject` | Mark document status as rejected. |
+| `DELETE` | `/api/documents/{id}` | Permanently delete document record and stored image. |
+| `GET` | `/api/stats` | Retrieve operational metrics, KPI totals, and chart history. |
+| `GET` | `/api/export` | Stream dataset export in `csv`, `xlsx`, or `json` formats. |
+
+---
+
+## Setup & Execution
 
 ### 1. Prerequisites & Environment Setup
 
@@ -93,20 +145,18 @@ cd "Photo to database automation system"
 pip install -r requirements.txt
 ```
 
-### 2. Environment Variables (.env)
-
-Copy `.env.example` to `.env`:
+### 2. Configure Environment Variables (.env)
 
 ```bash
 cp .env.example .env
 ```
 
-To enable Gemini Cloud Vision, set your API key in `.env`:
+To enable Gemini Cloud Vision, configure your key in `.env`:
 ```env
-GEMINI_API_KEY="your-api-key-here"
+GEMINI_API_KEY="your-gemini-api-key"
 DEFAULT_ENGINE="gemini"
 ```
-*(Note: If no API key is provided, SnapBase runs 100% locally with EasyOCR).*
+*(Note: If no API key is provided, SnapBase runs 100% locally with EasyOCR without error).*
 
 ### 3. Generate Sample Documents
 
@@ -114,21 +164,21 @@ DEFAULT_ENGINE="gemini"
 python sample_data/generate_samples.py
 ```
 
-### 4. Run the Streamlit Application
+### 4. Run the Web Application
 
 ```bash
-streamlit run app.py
+uvicorn app.main:app --reload
 ```
 
-The app will launch at `http://localhost:8501`.
+The portal will be accessible at `http://localhost:8000`.
 
 ### 5. Run the Automated Inbox Watcher
 
 ```bash
-# Run one-off inbox processing
+# Process all currently queued files once
 python watcher.py --once
 
-# Or run continuous daemon
+# Or run continuous background watcher
 python watcher.py
 ```
 
@@ -138,24 +188,20 @@ python watcher.py
 python -m pytest tests/ -v
 ```
 
+All 48 tests will execute and pass without error.
+
 ---
 
-## 🎨 Visual Design System
+## Visual Design System
 
-SnapBase uses a clean white background (`#FFFFFF`) with a black-to-red gradient top banner (`#111111` -> `#C62828`).
-- **Accent Primary**: `#C62828` (Crimson Red)
-- **Secondary**: `#111111` (Deep Black)
-- **Background**: `#FFFFFF` (Pure White)
+SnapBase implements a clean, accessible SaaS design language:
+- **Font**: Inter (Google Fonts).
+- **Background**: Pure white (`#FFFFFF`) with soft gray surface cards (`#F9FAFB`).
+- **Typography**: Near-black (`#111827`) and muted neutral grays (`#4B5563`, `#6B7280`).
+- **Brand Accent**: One crimson red accent (`#C62828`) reserved for primary buttons, active navigation indicators, and key highlights.
+- **Top / Header Bar**: Deep black (`#111111`) header contrast.
+- **Icons**: Clean Lucide SVG icons (`data-lucide="..."`), strictly avoiding emojis.
 - **Status Badges**:
-  - Green (`#2E7D32`): Approved & Processed
-  - Amber (`#E65100`): Pending Review
-  - Crimson (`#C62828`): Rejected
-- **Cards**: Pure white background with `#E5E5E5` borders and soft drop shadows.
-
----
-
-## 🔮 Future Enhancements
-
-- Multi-language OCR expansion beyond English.
-- Export directly to Google Sheets or QuickBooks via webhooks.
-- Fine-tuned local layout detection model (e.g. LayoutLMv3).
+  - Green (`bg-emerald-50 text-emerald-700`): Approved / Processed
+  - Amber (`bg-amber-50 text-amber-700`): Pending Verification
+  - Red (`bg-rose-50 text-rose-700`): Rejected

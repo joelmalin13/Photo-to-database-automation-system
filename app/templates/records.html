@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div 
+  x-data="recordsExplorer()"
+  class="space-y-6 relative"
+>
+  <!-- Page Header & Global Export Controls -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+    <div>
+      <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Records Repository</h2>
+      <p class="text-xs text-gray-500 mt-1">Search, inspect, filter, and batch export extracted document records.</p>
+    </div>
+
+    <!-- Export Dataset Actions -->
+    <div class="flex items-center gap-2">
+      <div class="relative" x-data="{ exportOpen: false }">
+        <button 
+          @click="exportOpen = !exportOpen"
+          class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Export Repository</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400"></i>
+        </button>
+
+        <div 
+          x-show="exportOpen" 
+          @click.outside="exportOpen = false" 
+          x-transition
+          class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1.5 z-30 text-xs"
+          style="display: none;"
+        >
+          <a href="/api/export?format=csv" target="_blank" class="flex items-center gap-2.5 px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+            <span>Export all as CSV</span>
+          </a>
+          <a href="/api/export?format=xlsx" target="_blank" class="flex items-center gap-2.5 px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <i data-lucide="sheet" class="w-4 h-4 text-emerald-600"></i>
+            <span>Export all as Excel</span>
+          </a>
+          <a href="/api/export?format=json" target="_blank" class="flex items-center gap-2.5 px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <i data-lucide="file-code" class="w-4 h-4 text-blue-600"></i>
+            <span>Export all as JSON</span>
+          </a>
+        </div>
+      </div>
+
+      <a 
+        href="/upload" 
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red-hover transition-colors shadow-sm"
+      >
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Add Records</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters & Live Search Bar -->
+  <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <!-- Search Input -->
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input 
+          type="text" 
+          id="records-search-input"
+          name="search"
+          placeholder="Search by vendor, ID number, invoice #, filename, or text..."
+          value="{{ search_query }}"
+          class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-xs focus:ring-2 focus:ring-brand-red focus:border-brand-red transition-colors"
+          hx-get="/partials/records-table"
+          hx-trigger="keyup changed delay:300ms, search"
+          hx-target="#records-table-container"
+          hx-include="#filter-doc-type, #filter-status, #filter-sort-by, #filter-sort-order"
+          hx-indicator="#table-loading"
+        >
+      </div>
+
+      <!-- Sort Controls -->
+      <div class="flex items-center gap-2">
+        <select 
+          id="filter-sort-by"
+          name="sort_by"
+          class="px-3 py-2 rounded-lg border border-gray-300 text-xs text-gray-700 focus:ring-2 focus:ring-brand-red focus:border-brand-red"
+          hx-get="/partials/records-table"
+          hx-trigger="change"
+          hx-target="#records-table-container"
+          hx-include="#records-search-input, #filter-doc-type, #filter-status, #filter-sort-order"
+          hx-indicator="#table-loading"
+        >
+          <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>Sort: Date Added</option>
+          <option value="id" {% if sort_by == 'id' %}selected{% endif %}>Sort: Document ID</option>
+          <option value="confidence" {% if sort_by == 'confidence' %}selected{% endif %}>Sort: Confidence Score</option>
+          <option value="filename" {% if sort_by == 'filename' %}selected{% endif %}>Sort: Filename</option>
+        </select>
+
+        <select 
+          id="filter-sort-order"
+          name="sort_order"
+          class="px-3 py-2 rounded-lg border border-gray-300 text-xs text-gray-700 focus:ring-2 focus:ring-brand-red focus:border-brand-red"
+          hx-get="/partials/records-table"
+          hx-trigger="change"
+          hx-target="#records-table-container"
+          hx-include="#records-search-input, #filter-doc-type, #filter-status, #filter-sort-by"
+          hx-indicator="#table-loading"
+        >
+          <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+          <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="pt-2 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <!-- Status Chips -->
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="text-gray-500 font-medium mr-1">Status:</span>
+        <input type="hidden" id="filter-status" name="status" :value="selectedStatus">
+        
+        <template x-for="st in [
+          { key: '', label: 'All' },
+          { key: 'pending', label: 'Pending Review' },
+          { key: 'processed', label: 'Approved' },
+          { key: 'rejected', label: 'Rejected' }
+        ]" :key="st.key">
+          <button 
+            type="button"
+            @click="setStatusFilter(st.key)"
+            class="px-2.5 py-1 rounded-full font-medium transition-colors border"
+            :class="selectedStatus === st.key ? 'bg-gray-900 text-white border-gray-900' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'"
+            x-text="st.label"
+          ></button>
+        </template>
+      </div>
+
+      <!-- Type Select -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-gray-500 font-medium">Type:</span>
+        <select 
+          id="filter-doc-type" 
+          name="doc_type"
+          x-model="selectedType"
+          @change="refreshTable()"
+          class="px-2.5 py-1 rounded-md border border-gray-200 text-xs text-gray-700 bg-gray-50 focus:ring-2 focus:ring-brand-red"
+        >
+          <option value="">All Document Types</option>
+          {% for sk, sv in schemas.items() %}
+          <option value="{{ sk }}" {% if current_type == sk %}selected{% endif %}>{{ sv.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Action Bar (Shows when records selected) -->
+  <div 
+    x-show="selectedIds.length > 0" 
+    x-transition
+    class="bg-gray-900 text-white p-3 rounded-xl flex items-center justify-between gap-4 shadow-md text-xs"
+    style="display: none;"
+  >
+    <div class="flex items-center gap-2">
+      <span class="w-6 h-6 rounded-full bg-brand-red text-white flex items-center justify-center font-bold text-xs" x-text="selectedIds.length"></span>
+      <span class="font-medium">records selected</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button 
+        @click="bulkDelete()"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-colors"
+      >
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        <span>Delete Selected</span>
+      </button>
+
+      <button 
+        @click="selectedIds = []; allSelected = false"
+        class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium transition-colors"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <!-- Table Loading Indicator -->
+  <div id="table-loading" class="htmx-indicator flex items-center justify-center py-4 gap-2 text-xs text-gray-500">
+    <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-brand-red"></i>
+    <span>Loading repository data...</span>
+  </div>
+
+  <!-- Records Table Container -->
+  <div id="records-table-container" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    {% include "partials/records_table.html" %}
+  </div>
+
+  <!-- Detail Slide-Over Drawer -->
+  <div 
+    x-show="drawerOpen" 
+    class="fixed inset-0 z-50 overflow-hidden" 
+    style="display: none;"
+  >
+    <!-- Backdrop -->
+    <div 
+      x-show="drawerOpen"
+      x-transition:enter="ease-in-out duration-300"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="ease-in-out duration-300"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      @click="drawerOpen = false"
+      class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+    ></div>
+
+    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+      <div 
+        x-show="drawerOpen"
+        x-transition:enter="transform transition ease-in-out duration-300 sm:duration-400"
+        x-transition:enter-start="translate-x-full"
+        x-transition:enter-end="translate-x-0"
+        x-transition:leave="transform transition ease-in-out duration-300 sm:duration-400"
+        x-transition:leave-start="translate-x-0"
+        x-transition:leave-end="translate-x-full"
+        class="pointer-events-auto w-screen max-w-md bg-white shadow-2xl p-6 flex flex-col justify-between overflow-y-auto"
+      >
+        <div id="detail-drawer-content">
+          <div class="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
+            <i data-lucide="loader-2" class="w-6 h-6 animate-spin text-brand-red"></i>
+            <span class="text-xs">Loading document inspection...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function recordsExplorer() {
+    return {
+      drawerOpen: false,
+      selectedIds: [],
+      allSelected: false,
+      selectedStatus: '{{ current_status if current_status != "all" else "" }}',
+      selectedType: '{{ current_type if current_type != "all" else "" }}',
+
+      init() {
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      },
+
+      setStatusFilter(status) {
+        this.selectedStatus = status;
+        this.refreshTable();
+      },
+
+      refreshTable() {
+        const search = document.getElementById('records-search-input')?.value || '';
+        const sortBy = document.getElementById('filter-sort-by')?.value || 'created_at';
+        const sortOrder = document.getElementById('filter-sort-order')?.value || 'desc';
+        
+        const params = new URLSearchParams({
+          page: 1,
+          doc_type: this.selectedType,
+          status: this.selectedStatus,
+          search: search,
+          sort_by: sortBy,
+          sort_order: sortOrder
+        });
+
+        htmx.ajax('GET', `/partials/records-table?${params.toString()}`, {
+          target: '#records-table-container',
+          swap: 'innerHTML'
+        });
+      },
+
+      toggleSelectAll(event) {
+        const checked = event.target.checked;
+        this.allSelected = checked;
+        const checkboxes = document.querySelectorAll('.record-checkbox');
+        this.selectedIds = [];
+        checkboxes.forEach(cb => {
+          cb.checked = checked;
+          if (checked) {
+            this.selectedIds.push(parseInt(cb.value));
+          }
+        });
+      },
+
+      updateSelected(event) {
+        const id = parseInt(event.target.value);
+        if (event.target.checked) {
+          if (!this.selectedIds.includes(id)) this.selectedIds.push(id);
+        } else {
+          this.selectedIds = this.selectedIds.filter(item => item !== id);
+          this.allSelected = false;
+        }
+      },
+
+      async deleteRecord(id) {
+        if (!confirm(`Are you sure you want to delete document #${id}? This action cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Failed to delete document');
+          showToast(`Document #${id} deleted successfully`, 'success');
+          this.refreshTable();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      },
+
+      async bulkDelete() {
+        if (!this.selectedIds.length) return;
+        if (!confirm(`Are you sure you want to permanently delete ${this.selectedIds.length} selected document(s)?`)) {
+          return;
+        }
+
+        let successCount = 0;
+        for (const id of this.selectedIds) {
+          try {
+            const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+            if (res.ok) successCount++;
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        showToast(`Successfully deleted ${successCount} document(s)`, 'success');
+        this.selectedIds = [];
+        this.allSelected = false;
+        this.refreshTable();
+      },
+
+      async approveFromDrawer(id) {
+        try {
+          const res = await fetch(`/api/documents/${id}/approve`, { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to approve');
+          showToast(`Document #${id} approved`, 'success');
+          this.drawerOpen = false;
+          this.refreshTable();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      },
+
+      async rejectFromDrawer(id) {
+        try {
+          const res = await fetch(`/api/documents/${id}/reject`, { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to reject');
+          showToast(`Document #${id} marked as rejected`, 'warning');
+          this.drawerOpen = false;
+          this.refreshTable();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    };
+  }
+</script>
+{% endblock %}

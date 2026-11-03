@@ -1,0 +1,221 @@
+<div class="overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+    <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10">
+      <tr>
+        <th scope="col" class="px-4 py-3.5 w-10">
+          <input 
+            type="checkbox" 
+            class="rounded border-gray-300 text-brand-red focus:ring-brand-red"
+            @change="toggleSelectAll($event)"
+            :checked="allSelected"
+          >
+        </th>
+        <th scope="col" class="px-4 py-3.5">Document</th>
+        <th scope="col" class="px-4 py-3.5">Type</th>
+        <th scope="col" class="px-4 py-3.5">Status</th>
+        <th scope="col" class="px-4 py-3.5">Confidence</th>
+        <th scope="col" class="px-4 py-3.5">Key Amount / ID</th>
+        <th scope="col" class="px-4 py-3.5">Captured</th>
+        <th scope="col" class="px-4 py-3.5 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200 bg-white">
+      {% for doc in items %}
+      <tr class="hover:bg-gray-50/80 transition-colors group cursor-pointer" id="row-doc-{{ doc.id }}">
+        <!-- Checkbox -->
+        <td class="px-4 py-3.5" @click.stop>
+          <input 
+            type="checkbox" 
+            value="{{ doc.id }}" 
+            class="record-checkbox rounded border-gray-300 text-brand-red focus:ring-brand-red"
+            @change="updateSelected($event)"
+            :checked="selectedIds.includes({{ doc.id }})"
+          >
+        </td>
+
+        <!-- Document Info / Preview -->
+        <td class="px-4 py-3.5" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+              {% if doc.image_path %}
+              <img src="/file/image/{{ doc.id }}" alt="Thumb" class="w-full h-full object-cover">
+              {% else %}
+              <i data-lucide="file-text" class="w-5 h-5 text-gray-400"></i>
+              {% endif %}
+            </div>
+            <div>
+              <div class="font-semibold text-gray-900 flex items-center gap-1.5">
+                <span>#{{ doc.id }}</span>
+                <span class="text-xs font-normal text-gray-500 truncate max-w-[140px]">{{ doc.filename }}</span>
+              </div>
+              <div class="text-xs text-gray-400">
+                Engine: {{ doc.engine_used }}
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <!-- Type -->
+        <td class="px-4 py-3.5 whitespace-nowrap" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 capitalize border border-gray-200">
+            {{ doc.type|replace('_', ' ') }}
+          </span>
+        </td>
+
+        <!-- Status -->
+        <td class="px-4 py-3.5 whitespace-nowrap" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          {% if doc.status == 'processed' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Approved
+          </span>
+          {% elif doc.status == 'rejected' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            Rejected
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            Pending
+          </span>
+          {% endif %}
+        </td>
+
+        <!-- Confidence -->
+        <td class="px-4 py-3.5 whitespace-nowrap" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          <div class="flex items-center gap-2">
+            <div class="w-16 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+              <div 
+                class="h-1.5 rounded-full {% if (doc.confidence|default(0.0)) >= 0.85 %}bg-emerald-500{% elif (doc.confidence|default(0.0)) >= 0.70 %}bg-amber-500{% else %}bg-rose-500{% endif %}"
+                style="width: {{ ((doc.confidence|default(0.0)) * 100)|round }}%"
+              ></div>
+            </div>
+            <span class="text-xs font-mono font-medium text-gray-600">{{ ((doc.confidence|default(0.0)) * 100)|round }}%</span>
+          </div>
+        </td>
+
+        <!-- Amount / ID Extracted -->
+        <td class="px-4 py-3.5 whitespace-nowrap text-xs font-mono text-gray-700" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          {% if doc.fields.get('total_amount') %}
+            <span class="font-semibold text-gray-900">${{ "%.2f"|format(doc.fields.get('total_amount')|float) }}</span>
+          {% elif doc.fields.get('id_number') %}
+            <span>ID: {{ doc.fields.get('id_number') }}</span>
+          {% elif doc.fields.get('email') %}
+            <span class="truncate max-w-[120px]">{{ doc.fields.get('email') }}</span>
+          {% else %}
+            <span class="text-gray-400">&mdash;</span>
+          {% endif %}
+        </td>
+
+        <!-- Captured -->
+        <td class="px-4 py-3.5 whitespace-nowrap text-xs text-gray-500" hx-get="/partials/drawer/{{ doc.id }}" hx-target="#detail-drawer-content" @click="drawerOpen = true">
+          {{ doc.created_at[:16]|replace('T', ' ') if doc.created_at else 'Recent' }}
+        </td>
+
+        <!-- Actions -->
+        <td class="px-4 py-3.5 whitespace-nowrap text-right text-xs font-medium" @click.stop>
+          <div class="flex items-center justify-end gap-1.5">
+            <a 
+              href="/review/{{ doc.id }}" 
+              class="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              title="Review & Verify"
+            >
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </a>
+
+            <button 
+              hx-get="/partials/drawer/{{ doc.id }}" 
+              hx-target="#detail-drawer-content" 
+              @click="drawerOpen = true"
+              class="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              title="Drawer Quick View"
+            >
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+
+            <button 
+              @click="deleteRecord({{ doc.id }})" 
+              class="p-1.5 text-gray-400 hover:text-brand-red hover:bg-rose-50 rounded-md transition-colors"
+              title="Delete Document"
+            >
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="px-6 py-12 text-center">
+          <div class="mx-auto w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+            <i data-lucide="search-x" class="w-6 h-6"></i>
+          </div>
+          <p class="text-sm font-semibold text-gray-800">No matching records found</p>
+          <p class="text-xs text-gray-500 mt-1 max-w-sm mx-auto">Try adjusting your filters, clearing the search query, or upload new document images to get started.</p>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination & Summary Bar -->
+<div class="px-4 py-3.5 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+  <div>
+    Showing <span class="font-semibold text-gray-900">{{ items|length }}</span> of <span class="font-semibold text-gray-900">{{ total }}</span> records
+    {% if total_pages > 1 %}
+    (Page <span class="font-semibold text-gray-900">{{ page }}</span> of {{ total_pages }})
+    {% endif %}
+  </div>
+
+  {% if total_pages > 1 %}
+  <div class="flex items-center gap-1.5">
+    {% if page > 1 %}
+    <button 
+      class="px-2.5 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 font-medium transition-colors flex items-center gap-1"
+      hx-get="/partials/records-table?page={{ page - 1 }}&doc_type={{ current_type }}&status={{ current_status }}&search={{ search_query }}"
+      hx-target="#records-table-container"
+      hx-indicator="#table-loading"
+    >
+      <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+      <span>Previous</span>
+    </button>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+      {% if p == page %}
+      <span class="px-2.5 py-1.5 rounded-md bg-brand-red text-white font-semibold">{{ p }}</span>
+      {% elif p <= 3 or p >= total_pages - 1 or (p >= page - 1 and p <= page + 1) %}
+      <button 
+        class="px-2.5 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 font-medium transition-colors"
+        hx-get="/partials/records-table?page={{ p }}&doc_type={{ current_type }}&status={{ current_status }}&search={{ search_query }}"
+        hx-target="#records-table-container"
+        hx-indicator="#table-loading"
+      >
+        {{ p }}
+      </button>
+      {% elif p == 4 or p == total_pages - 2 %}
+      <span class="px-1 text-gray-400">...</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <button 
+      class="px-2.5 py-1.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 font-medium transition-colors flex items-center gap-1"
+      hx-get="/partials/records-table?page={{ page + 1 }}&doc_type={{ current_type }}&status={{ current_status }}&search={{ search_query }}"
+      hx-target="#records-table-container"
+      hx-indicator="#table-loading"
+    >
+      <span>Next</span>
+      <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+</script>

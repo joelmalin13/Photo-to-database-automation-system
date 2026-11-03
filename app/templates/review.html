@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if document %}
+<div class="space-y-6" x-data="reviewManager({{ document.id }})">
+
+  <!-- Top Document Switcher & Action Toolbar -->
+  <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="text-xs font-semibold text-gray-500 uppercase">Document:</span>
+      <select 
+        onchange="if(this.value) window.location.href='/review/' + this.value"
+        class="text-xs font-semibold border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-red"
+      >
+        {% for d in all_docs %}
+        <option value="{{ d.id }}" {% if d.id == document.id %}selected{% endif %}>
+          #{{ d.id }} &middot; {{ d.filename }} ({{ d.type|replace('_', ' ')|title }}) &mdash; [{{ d.status|upper }}]
+        </option>
+        {% endfor %}
+      </select>
+
+      <!-- Status Pill -->
+      {% if document.status == 'processed' %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <i data-lucide="check" class="w-3 h-3"></i> Approved
+      </span>
+      {% elif document.status == 'rejected' %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+        <i data-lucide="x" class="w-3 h-3"></i> Rejected
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+        <i data-lucide="clock" class="w-3 h-3"></i> Pending Verification
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Review Action Buttons with Keyboard Shortcuts -->
+    <div class="flex items-center gap-2">
+      <button 
+        type="button"
+        id="btn-reject-document"
+        @click="rejectDocument()"
+        class="px-3.5 py-2 rounded-lg text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 inline-flex items-center gap-1.5 transition-colors"
+        title="Shortcut: Esc"
+      >
+        <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600"></i>
+        <span>Reject (Esc)</span>
+      </button>
+
+      <button 
+        type="button"
+        @click="saveChanges()"
+        class="px-3.5 py-2 rounded-lg text-xs font-bold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 inline-flex items-center gap-1.5 transition-colors shadow-sm"
+      >
+        <i data-lucide="save" class="w-3.5 h-3.5 text-gray-600"></i>
+        <span>Save Edits</span>
+      </button>
+
+      <button 
+        type="button"
+        id="btn-approve-document"
+        @click="approveDocument()"
+        class="px-4 py-2 rounded-lg text-xs font-bold btn-primary inline-flex items-center gap-1.5"
+        title="Shortcut: Ctrl+Enter"
+      >
+        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+        <span>Approve & Save (Ctrl+Enter)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Split View (Viewer on Left, Form on Right) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    
+    <!-- Left Pane: Zoomable / Pannable Viewer -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col" x-data="imageViewer()">
+      <!-- Toolbar -->
+      <div class="p-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between text-xs text-gray-600 font-medium">
+        <span class="flex items-center gap-1.5 font-bold text-gray-800">
+          <i data-lucide="image" class="w-4 h-4 text-brand-red"></i>
+          <span>Document Photo</span>
+        </span>
+        
+        <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-gray-200 shadow-xs">
+          <button type="button" @click="zoomIn()" class="p-1 hover:bg-gray-100 rounded" title="Zoom In">
+            <i data-lucide="zoom-in" class="w-4 h-4"></i>
+          </button>
+          <button type="button" @click="zoomOut()" class="p-1 hover:bg-gray-100 rounded" title="Zoom Out">
+            <i data-lucide="zoom-out" class="w-4 h-4"></i>
+          </button>
+          <button type="button" @click="rotate()" class="p-1 hover:bg-gray-100 rounded" title="Rotate 90 Deg">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+          <button type="button" @click="reset()" class="p-1 hover:bg-gray-100 rounded" title="Reset View">
+            <i data-lucide="maximize" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Viewport -->
+      <div 
+        class="image-viewer-viewport h-[600px] flex items-center justify-center relative p-4"
+        @mousedown="startPan($event)"
+        @mousemove="pan($event)"
+        @mouseup="endPan()"
+        @mouseleave="endPan()"
+      >
+        <img 
+          src="/file/image/{{ document.id }}" 
+          alt="Document Preview" 
+          class="image-viewer-content max-h-full max-w-full object-contain pointer-events-none rounded shadow"
+          :style="transformStyle"
+        >
+      </div>
+
+      <div class="p-3 bg-gray-50/50 border-t border-gray-100 text-[11px] text-gray-500 flex justify-between">
+        <span>Hash: <code>{{ document.image_hash[:16] }}...</code></span>
+        <span>Drag to pan &middot; Use buttons to zoom</span>
+      </div>
+    </div>
+
+    <!-- Right Pane: Editable Fields Form -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 space-y-6">
+      
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">Extracted Attributes</h3>
+        <p class="text-xs text-gray-500">Correct any discrepancies and verify low-confidence fields</p>
+      </div>
+
+      <!-- Low Confidence Alert Box -->
+      {% set low_conf = [] %}
+      {% for k, conf in document.field_confidences.items() %}
+        {% if conf < confidence_threshold %}
+          {% set _ = low_conf.append(k) %}
+        {% endif %}
+      {% endfor %}
+
+      {% if low_conf %}
+      <div class="p-3.5 rounded-lg bg-amber-50 border-l-4 border-amber-500 flex items-start gap-2.5">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"></i>
+        <div class="text-xs text-amber-900">
+          <span class="font-bold">Low Confidence Detected:</span> Verify <b>{{ low_conf|join(', ') }}</b> before approving.
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Fields Inputs -->
+      <div class="space-y-4">
+        {% for f in schema_fields %}
+        {% set val = document.fields.get(f.key, '') %}
+        {% set conf = document.field_confidences.get(f.key, 1.0) %}
+        {% set conf_pct = (conf * 100)|int %}
+
+        <div class="space-y-1.5 p-3 rounded-lg border {% if conf < confidence_threshold %}border-amber-300 bg-amber-50/20{% else %}border-gray-200 bg-white{% endif %}">
+          <div class="flex items-center justify-between text-xs">
+            <label class="font-semibold text-gray-800">{{ f.label }}</label>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-mono {% if conf >= 0.85 %}text-emerald-700{% elif conf >= confidence_threshold %}text-amber-700{% else %}text-rose-700 font-bold{% endif %}">
+                {{ conf_pct }}%
+              </span>
+              <div class="w-16 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                <div class="h-1.5 rounded-full {% if conf >= 0.85 %}bg-emerald-500{% elif conf >= confidence_threshold %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ conf_pct }}%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <input 
+            type="text" 
+            x-model="fields['{{ f.key }}']"
+            class="w-full text-xs font-medium px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-red bg-white"
+          >
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Line Items Table -->
+      <div class="pt-4 border-t border-gray-100 space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-gray-900 uppercase tracking-wider">Tabular Line Items</h4>
+          <button type="button" @click="addLineItem()" class="text-xs font-semibold text-brand-red hover:underline inline-flex items-center gap-1">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Add Row</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-gray-50 border-b border-gray-200 text-gray-500">
+              <tr>
+                <th class="p-2 font-semibold">Description</th>
+                <th class="p-2 font-semibold w-20">Qty</th>
+                <th class="p-2 font-semibold w-24">Price</th>
+                <th class="p-2 font-semibold w-24">Total</th>
+                <th class="p-2 w-10 text-center"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <template x-for="(item, idx) in lineItems" :key="idx">
+                <tr>
+                  <td class="p-2">
+                    <input type="text" x-model="item.description" class="w-full text-xs px-2 py-1 border rounded focus:ring-1 focus:ring-brand-red">
+                  </td>
+                  <td class="p-2">
+                    <input type="number" x-model.number="item.quantity" @input="updateLineTotal(item)" class="w-full text-xs px-2 py-1 border rounded focus:ring-1 focus:ring-brand-red">
+                  </td>
+                  <td class="p-2">
+                    <input type="number" step="0.01" x-model.number="item.unit_price" @input="updateLineTotal(item)" class="w-full text-xs px-2 py-1 border rounded focus:ring-1 focus:ring-brand-red">
+                  </td>
+                  <td class="p-2">
+                    <input type="number" step="0.01" x-model.number="item.amount" class="w-full text-xs px-2 py-1 border rounded bg-gray-50 font-bold" readonly>
+                  </td>
+                  <td class="p-2 text-center">
+                    <button type="button" @click="removeLineItem(idx)" class="text-gray-400 hover:text-rose-600">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+function reviewManager(docId) {
+  return {
+    docId: docId,
+    fields: {{ document.fields|tojson }},
+    lineItems: {{ document.line_items|tojson }} || [],
+
+    addLineItem() {
+      this.lineItems.push({ description: '', quantity: 1, unit_price: 0.0, amount: 0.0 });
+      setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 20);
+    },
+    removeLineItem(idx) {
+      this.lineItems.splice(idx, 1);
+    },
+    updateLineTotal(item) {
+      item.amount = Math.round((Number(item.quantity || 0) * Number(item.unit_price || 0)) * 100) / 100;
+    },
+    async saveChanges() {
+      try {
+        const res = await fetch(`/api/documents/${this.docId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: this.fields }),
+        });
+        if (!res.ok) throw new Error('Failed saving field updates');
+        window.showToast('Document edits saved successfully', 'success');
+      } catch (err) {
+        window.showToast(err.message, 'error');
+      }
+    },
+    async approveDocument() {
+      await this.saveChanges();
+      try {
+        const res = await fetch(`/api/documents/${this.docId}/approve`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed approving document');
+        window.showToast('Document verified & approved!', 'success');
+        setTimeout(() => window.location.reload(), 400);
+      } catch (err) {
+        window.showToast(err.message, 'error');
+      }
+    },
+    async rejectDocument() {
+      try {
+        const res = await fetch(`/api/documents/${this.docId}/reject`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed rejecting document');
+        window.showToast('Document marked as rejected', 'info');
+        setTimeout(() => window.location.reload(), 400);
+      } catch (err) {
+        window.showToast(err.message, 'error');
+      }
+    }
+  };
+}
+</script>
+{% else %}
+<div class="bg-white p-12 rounded-xl border border-gray-200 text-center max-w-md mx-auto space-y-4">
+  <div class="w-12 h-12 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center mx-auto">
+    <i data-lucide="inbox" class="w-6 h-6 stroke-[1.5]"></i>
+  </div>
+  <div>
+    <h3 class="text-sm font-bold text-gray-900">No Documents Available</h3>
+    <p class="text-xs text-gray-500 mt-1">Upload photos to begin reviewing and correcting extractions</p>
+  </div>
+  <a href="/upload" class="px-4 py-2 text-xs font-bold rounded-lg btn-primary inline-flex items-center gap-1.5">
+    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+    <span>Go to Upload</span>
+  </a>
+</div>
+{% endif %}
+{% endblock %}

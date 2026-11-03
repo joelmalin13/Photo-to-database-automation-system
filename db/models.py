@@ -72,6 +72,8 @@ class Document(Base):
         Returns:
             Dict[str, Any]: Serialized document record.
         """
+        confs = [f.confidence for f in self.fields]
+        avg_conf = sum(confs) / len(confs) if confs else 0.0
         return {
             "id": self.id,
             "type": self.type,
@@ -80,6 +82,8 @@ class Document(Base):
             "image_hash": self.image_hash,
             "status": self.status,
             "is_edited": self.is_edited,
+            "confidence": round(avg_conf, 2),
+            "engine_used": "Offline OCR" if "ocr" in self.filename.lower() else "Gemini / OCR",
             "created_at": (
                 self.created_at.isoformat() if self.created_at else None
             ),

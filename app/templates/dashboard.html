@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- KPI Top Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+    
+    <!-- Total Ingested -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Documents</span>
+        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700">
+          <i data-lucide="files" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-gray-900">{{ stats.total_documents }}</div>
+        <div class="text-xs text-gray-500 mt-1">Processed document photos</div>
+      </div>
+    </div>
+
+    <!-- Approved / Processed -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Records</span>
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-emerald-600">{{ stats.status_counts.processed }}</div>
+        <div class="text-xs text-gray-500 mt-1">Verified & persisted to DB</div>
+      </div>
+    </div>
+
+    <!-- Pending Review -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Review</span>
+        <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-amber-600">{{ stats.status_counts.pending }}</div>
+        <div class="text-xs text-gray-500 mt-1">Awaiting human sign-off</div>
+      </div>
+    </div>
+
+    <!-- Extraction Accuracy -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Zero-Edit Accuracy</span>
+        <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-brand-red">
+          <i data-lucide="target" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        {% if stats.has_data %}
+        <div class="text-3xl font-extrabold text-gray-900">{{ stats.accuracy_rate }}%</div>
+        <div class="text-xs text-gray-500 mt-1">{{ stats.unedited_count }} of {{ stats.total_documents }} unedited</div>
+        {% else %}
+        <div class="text-2xl font-bold text-gray-400">No data yet</div>
+        <div class="text-xs text-gray-400 mt-1">Ingest images to calculate</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Ingestion Timeline -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Ingestion Volume Over Time</h2>
+          <p class="text-xs text-gray-500">Daily document processing activity</p>
+        </div>
+        <i data-lucide="trending-up" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <div class="h-64">
+        {% if stats.has_data and stats.timeseries.labels %}
+        <canvas id="timelineChart"></canvas>
+        {% else %}
+        <div class="h-full flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="bar-chart-2" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No activity recorded yet</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Status Distribution Donut -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Status Breakdown</h2>
+          <p class="text-xs text-gray-500">Approval vs rejection distribution</p>
+        </div>
+        <i data-lucide="pie-chart" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <div class="h-64 flex items-center justify-center">
+        {% if stats.has_data %}
+        <canvas id="statusChart"></canvas>
+        {% else %}
+        <div class="flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="pie-chart" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No data yet</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Lower Section: Document Type Bar & Recent Activity -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Classification Types -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Documents by Schema</h2>
+          <p class="text-xs text-gray-500">Classification count</p>
+        </div>
+        <i data-lucide="layers" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <div class="h-64">
+        {% if stats.has_data %}
+        <canvas id="typesChart"></canvas>
+        {% else %}
+        <div class="h-full flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="layers" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No schema data</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent Activity Feed -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Recent Ingestion Activity</h2>
+          <p class="text-xs text-gray-500">Latest document uploads and verifications</p>
+        </div>
+        <a href="/records" class="text-xs font-semibold text-brand-red hover:underline flex items-center gap-1">
+          <span>View All</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
+        </a>
+      </div>
+
+      <div class="flex-1 overflow-x-auto">
+        {% if stats.recent_activity %}
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wider">
+              <th class="py-2.5 font-semibold">ID</th>
+              <th class="py-2.5 font-semibold">Filename</th>
+              <th class="py-2.5 font-semibold">Schema</th>
+              <th class="py-2.5 font-semibold">Status</th>
+              <th class="py-2.5 font-semibold">Date</th>
+              <th class="py-2.5 text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for item in stats.recent_activity %}
+            <tr class="hover:bg-gray-50/70 transition-colors">
+              <td class="py-3 font-mono text-xs font-bold text-gray-500">#{{ item.id }}</td>
+              <td class="py-3 font-medium text-gray-900 truncate max-w-xs">{{ item.filename }}</td>
+              <td class="py-3 text-xs text-gray-600">{{ item.type|replace('_', ' ')|title }}</td>
+              <td class="py-3">
+                {% if item.status == 'processed' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Approved
+                </span>
+                {% elif item.status == 'rejected' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Rejected
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
+                </span>
+                {% endif %}
+              </td>
+              <td class="py-3 text-xs text-gray-500">{{ item.created_at }}</td>
+              <td class="py-3 text-right">
+                <a href="/review/{{ item.id }}" class="text-xs font-semibold text-brand-red hover:underline">
+                  Inspect
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="h-44 flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="inbox" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No documents processed yet</span>
+          <a href="/upload" class="mt-3 px-3 py-1.5 text-xs font-semibold rounded-lg btn-primary inline-flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Upload Document</span>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Chart.js Render Scripts -->
+{% if stats.has_data %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Timeline Chart
+  const ctxTimeline = document.getElementById('timelineChart');
+  if (ctxTimeline) {
+    new Chart(ctxTimeline, {
+      type: 'line',
+      data: {
+        labels: {{ stats.timeseries.labels|tojson }},
+        datasets: [{
+          label: 'Documents',
+          data: {{ stats.timeseries['values']|tojson }},
+          borderColor: '#C62828',
+          backgroundColor: 'rgba(198, 40, 40, 0.06)',
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#C62828',
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // Status Donut Chart
+  const ctxStatus = document.getElementById('statusChart');
+  if (ctxStatus) {
+    new Chart(ctxStatus, {
+      type: 'doughnut',
+      data: {
+        labels: ['Approved', 'Pending', 'Rejected'],
+        datasets: [{
+          data: [
+            {{ stats.status_counts.processed }},
+            {{ stats.status_counts.pending }},
+            {{ stats.status_counts.rejected }}
+          ],
+          backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // Document Types Bar Chart
+  const ctxTypes = document.getElementById('typesChart');
+  if (ctxTypes) {
+    const typeLabels = Object.keys({{ stats.type_counts|tojson }}).map(k => k.replace(/_/g, ' ').toUpperCase());
+    const typeValues = Object.values({{ stats.type_counts|tojson }});
+    new Chart(ctxTypes, {
+      type: 'bar',
+      data: {
+        labels: typeLabels,
+        datasets: [{
+          data: typeValues,
+          backgroundColor: '#111827',
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endif %}
+{% endblock %}
