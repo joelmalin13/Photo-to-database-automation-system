@@ -1,135 +1,81 @@
-"""Application configuration and centralized settings for SnapBase.
-
-Provides directory paths, environment variable access, schema loaders,
-status enums, and structured logging configuration.
+"""Global application configuration, environment settings, and directory definitions for PixelMind.
 """
 
 from __future__ import annotations
 
-from enum import Enum
 import json
 import logging
 import os
 from pathlib import Path
 from typing import Any, Dict
-
 from dotenv import load_dotenv
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# Base project directories
-BASE_DIR: Path = Path(__file__).resolve().parent.parent
-CONFIG_DIR: Path = BASE_DIR / "config"
-DATA_DIR: Path = BASE_DIR / "data"
-UPLOAD_DIR: Path = DATA_DIR / "uploads"
-PROCESSED_DIR: Path = DATA_DIR / "processed"
-INBOX_DIR: Path = BASE_DIR / "inbox"
-FAILED_DIR: Path = BASE_DIR / "failed"
-LOGS_DIR: Path = DATA_DIR / "logs"
+# Project directory structure
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG_DIR = BASE_DIR / "config"
+DATA_DIR = BASE_DIR / "data"
+UPLOAD_DIR = BASE_DIR / "uploads"
+ANNOTATED_DIR = DATA_DIR / "annotated"
+SAMPLE_DATA_DIR = BASE_DIR / "sample_data"
 
-# Ensure runtime directories exist
-for directory in (
-    DATA_DIR,
-    UPLOAD_DIR,
-    PROCESSED_DIR,
-    INBOX_DIR,
-    FAILED_DIR,
-    LOGS_DIR,
-):
+# Create directories if needed
+for directory in [DATA_DIR, UPLOAD_DIR, ANNOTATED_DIR, SAMPLE_DATA_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
-# Database credentials & URL configuration
-DB_USER: str = os.getenv("DB_USER", "root")
-DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
-DB_HOST: str = os.getenv("DB_HOST", "localhost")
-DB_PORT: str = os.getenv("DB_PORT", "3306")
-DB_NAME: str = os.getenv("DB_NAME", "photo_automation")
+# Database Configuration
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "3306")
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_NAME = os.getenv("DB_NAME", "pixelmind")
 
-# Default MySQL connection string using mysql-connector-python
-DEFAULT_MYSQL_URL: str = (
-    f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DEFAULT_MYSQL_URL = f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DEFAULT_SQLITE_URL = f"sqlite:///{(DATA_DIR / 'pixelmind.db').as_posix()}"
+DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_MYSQL_URL)
+
+# Vision Model Configuration
+YOLO_MODEL_NAME = os.getenv("YOLO_MODEL_NAME", "yolov8n.pt")
+CLIP_MODEL_NAME = os.getenv("CLIP_MODEL_NAME", "ViT-B-32")
+CLIP_PRETRAINED = os.getenv("CLIP_PRETRAINED", "openai")
+CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.25"))
+
+# Ingestion constraints
+MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+# Optional LLM Integration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# Logging Setup
+LOG_FILE = DATA_DIR / "pixelmind.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] [%(levelname)s] [pixelmind]: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+    ],
 )
-
-# SQLite fallback path
-SQLITE_DB_PATH: Path = DATA_DIR / "snapbase.db"
-DEFAULT_SQLITE_URL: str = f"sqlite:///{SQLITE_DB_PATH.as_posix()}"
-
-# Final configured DATABASE_URL (defaults to MySQL string, checked at runtime in db/session.py)
-DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_MYSQL_URL)
-
-# OCR and Extraction Engine settings
-# Specification: Default engine is EasyOCR; Tesseract & Gemini are optional via settings
-DEFAULT_ENGINE: str = os.getenv("DEFAULT_ENGINE", "ocr")  # 'ocr' (EasyOCR), 'tesseract', or 'gemini'
-GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-TESSERACT_CMD: str | None = os.getenv("TESSERACT_CMD")
-
-# Processing parameters
-CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.70"))
-MAX_IMAGE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
-ALLOWED_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".webp"}
-
-# UI Palette and styling constants
-THEME_PRIMARY: str = "#C62828"
-THEME_SECONDARY: str = "#111111"
-THEME_BACKGROUND: str = "#FFFFFF"
-THEME_TEXT: str = "#111827"
-THEME_BORDER: str = "#E5E7EB"
+logger = logging.getLogger("pixelmind")
 
 
-class DocumentStatus(str, Enum):
-    """Lifecycle statuses matching official specification."""
-
-    UPLOADED = "uploaded"
-    PROCESSED = "processed"
-    VERIFIED = "verified"
-    REJECTED = "rejected"
-    FAILED = "failed"
-    # Aliases for backwards compatibility with earlier components
-    PENDING = "processed"
+def load_categories_config() -> Dict[str, str]:
+    """Load label-to-category mapping from config/categories.json."""
+    cat_file = CONFIG_DIR / "categories.json"
+    if cat_file.exists():
+        with open(cat_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
 
-class DocumentCategory(str, Enum):
-    """Normalized document categories matching official schema."""
-
-    RECEIPTS = "receipts"
-    STUDENTS = "students"
-    BUSINESS_CARDS = "business_cards"
-    OTHER = "other"
-
-
-def load_schemas() -> Dict[str, Any]:
-    """Load and parse document field schemas from config/schemas.json."""
-    schemas_file = CONFIG_DIR / "schemas.json"
-    if not schemas_file.exists():
-        raise FileNotFoundError(f"Schema file not found at {schemas_file}")
-    with open(schemas_file, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def setup_logger(name: str = "snapbase") -> logging.Logger:
-    """Configure unified logger with both console and rotating file output."""
-    logger = logging.getLogger(name)
-    if logger.handlers:
-        return logger
-
-    logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    log_file = LOGS_DIR / "snapbase.log"
-    file_handler = logging.FileHandler(log_file, encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    return logger
-
-
-logger = setup_logger()
+def load_scenes_config() -> Dict[str, Any]:
+    """Load scene definitions and environments from config/scenes.json."""
+    scene_file = CONFIG_DIR / "scenes.json"
+    if scene_file.exists():
+        with open(scene_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"scenes": [], "environments": ["indoor", "outdoor"], "canonical_categories": []}

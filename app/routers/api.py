@@ -1,268 +1,248 @@
-"""REST API endpoints for SnapBase document processing, computer vision, and reporting.
+"""OpenAPI-documented REST endpoints for PixelMind visual intelligence platform.
 
-Exposes structured JSON endpoints for:
-- Single & batch document ingestion
-- Interactive image enhancement playground
-- Human-in-the-loop verification & confirmed table promotion
-- Multi-criteria database querying
-- Operational analytics and report generation
+Provides programmatic JSON endpoints for image ingestion, semantic search,
+natural language visual Q&A, reverse image similarity, and visual analytics.
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Form,
-    HTTPException,
-    Query,
-    Response,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.services.document_service import DocumentService
-from app.services.image_processing_service import ImageProcessingService
-from app.services.report_service import ReportService
-from app.services.stats_service import StatsService
+from app.services.analytics_service import AnalyticsService
+from app.services.dna_service import DnaService
+from app.services.image_service import ImageService
+from app.services.search_service import SearchService
+from core.exceptions import DuplicateImageError, InvalidImageError
+from db.crud import delete_image
+from db.session import get_db_status
 
-api_router = APIRouter(prefix="/api", tags=["SnapBase API"])
-
-
-class DocumentFieldUpdate(BaseModel):
-    """Payload schema for modifying extracted document fields."""
-    fields: Dict[str, Any] = Field(..., description="Key-value dictionary of updated fields")
-    items: Optional[List[Dict[str, Any]]] = Field(default=None, description="Line items or mark rows")
+router = APIRouter(prefix="/api", tags=["Visual Intelligence API"])
 
 
-class ApprovePayload(BaseModel):
-    """Optional payload when explicitly approving verified fields."""
-    fields: Optional[Dict[str, Any]] = None
-    items: Optional[List[Dict[str, Any]]] = None
+# -------------------------------------------------------------
+# Request & Response Schemas
+# -------------------------------------------------------------
+
+class SearchRequest(BaseModel):
+    """Natural language search payload."""
+    query: str = Field(..., min_length=1, description="Natural language search query e.g. 'a red car beside a tree'")
+    limit: Optional[int] = Field(20, ge=1, le=100)
 
 
-@api_router.post(
-    "/documents",
+class AskRequest(BaseModel):
+    """Ask Your Images question payload."""
+    question: str = Field(..., min_length=1, description="Natural language question about the image database")
+
+
+# -------------------------------------------------------------
+# Endpoints
+# -------------------------------------------------------------
+
+@router.post(
+    "/images",
     status_code=status.HTTP_201_CREATED,
-    summary="Upload and ingest document photographs",
+    summary="Upload and ingest one or multiple photographs",
 )
-async def upload_documents(
+async def upload_images(
     files: List[UploadFile] = File(...),
-    doc_type: str = Form("auto"),
-    preferred_engine: Optional[str] = Form(None),
+    confidence_threshold: float = Form(0.25),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Ingest, validate, preprocess, and extract structured data from one or more images."""
-    service = DocumentService(db)
-    results = []
+    """Ingest image files, detect objects with YOLO, compute DNA, and persist records."""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided for upload.")
+
+    service = ImageService(db)
+    ingested_items: List[Dict[str, Any]] = []
+    errors: List[str] = []
+
     for file in files:
-        res = await service.ingest_upload(
-            file, category=doc_type, preferred_engine=preferred_engine
-        )
-        results.append(
-            {
-                "filename": res.filename,
-                "document_id": res.document_id,
-                "category": res.doc_type,
-                "type": res.doc_type,
-                "status": res.status,
-                "is_duplicate": res.is_duplicate,
-                "engine_used": res.engine_used,
-                "fields": res.fields,
-                "confidences": res.confidences,
-                "warnings": res.warnings,
-                "error": res.error_message,
-                "word_confidences": res.word_confidences,
-            }
-        )
-    return {"processed_count": len(results), "documents": results}
+        try:
+            content = await file.read()
+            img, is_dup, msg = service.ingest_image(
+                filename=file.filename or "uploaded.jpg",
+                file_bytes=content,
+                confidence_threshold=confidence_threshold,
+            )
+            item_dict = img.to_dict()
+            item_dict["is_duplicate"] = is_dup
+            item_dict["message"] = msg
+            ingested_items.append(item_dict)
+        except InvalidImageError as err:
+            errors.append(f"{file.filename}: {err.message}")
+        except Exception as exc:
+            errors.append(f"{file.filename}: Processing failed ({exc})")
 
+    if not ingested_items and errors:
+        raise HTTPException(status_code=400, detail="; ".join(errors))
 
-@api_router.get("/documents", summary="List, search, filter, and paginate documents")
-def list_documents_endpoint(
-    doc_type: Optional[str] = Query(None, alias="category"),
-    category: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    sort_by: str = Query("created_at"),
-    sort_order: str = Query("desc"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    """Retrieve paginated collection of documents based on query filters."""
-    service = DocumentService(db)
-    cat_filter = category or doc_type
-    items, total = service.list_documents(
-        category=cat_filter,
-        status=status,
-        search_query=search,
-        sort_by=sort_by,
-        sort_order=sort_order,
-        page=page,
-        page_size=page_size,
-    )
-    total_pages = max(1, (total + page_size - 1) // page_size)
     return {
-        "items": items,
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-        "total_pages": total_pages,
+        "success": True,
+        "processed_count": len(ingested_items),
+        "images": ingested_items,
+        "errors": errors,
     }
 
 
-@api_router.get("/documents/{doc_id}", summary="Get document by ID")
-def get_document_endpoint(
-    doc_id: int, db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """Fetch single document record by primary key."""
-    service = DocumentService(db)
-    doc = service.get_document(doc_id)
-    if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
-        )
-    return doc
-
-
-@api_router.patch("/documents/{doc_id}", summary="Update document extracted fields")
-def update_document_fields_endpoint(
-    doc_id: int,
-    payload: DocumentFieldUpdate,
-    db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    """Modify extracted fields for an existing document."""
-    service = DocumentService(db)
-    doc = service.update_fields(doc_id, payload.fields)
-    if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
-        )
-    return doc
-
-
-@api_router.post("/documents/{doc_id}/approve", summary="Approve and promote to confirmed table")
-def approve_document_endpoint(
-    doc_id: int,
-    payload: Optional[ApprovePayload] = None,
-    db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    """Approve document and promote data into official normalized confirmed tables (receipts/students/cards)."""
-    service = DocumentService(db)
-    fields = payload.fields if payload else None
-    items = payload.items if payload else None
-    doc = service.approve_document(doc_id, verified_fields=fields, items=items)
-    if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
-        )
-    return doc
-
-
-@api_router.post("/documents/{doc_id}/reject", summary="Reject document record")
-def reject_document_endpoint(
-    doc_id: int,
-    reason: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-) -> Dict[str, Any]:
-    """Transition document status to rejected."""
-    service = DocumentService(db)
-    doc = service.reject_document(doc_id, reason=reason)
-    if not doc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
-        )
-    return doc
-
-
-@api_router.delete(
-    "/documents/{doc_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete document record",
+@router.get(
+    "/images",
+    summary="Search, filter, sort, and paginate stored images",
 )
-def delete_document_endpoint(
-    doc_id: int, db: Session = Depends(get_db)
-) -> Response:
-    """Delete document entity and associated disk file."""
-    service = DocumentService(db)
-    deleted = service.delete_document(doc_id)
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
-        )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@api_router.post("/image-processing/preview", summary="Interactive image enhancement and OCR retry")
-async def image_processing_preview(
-    file: UploadFile = File(...),
-    rotate_deg: float = Form(0.0),
-    grayscale: bool = Form(True),
-    denoise: bool = Form(True),
-    gaussian_blur: bool = Form(False),
-    sharpen: bool = Form(False),
-    threshold_method: str = Form("none"),
-    clahe: bool = Form(True),
-    perspective: bool = Form(False),
-    run_ocr: bool = Form(False),
-    engine: Optional[str] = Form(None),
+def list_images_endpoint(
+    category: Optional[str] = Query(None, description="Filter by category e.g. Vehicles, Animals"),
+    label: Optional[str] = Query(None, description="Filter by detected object label e.g. car, person"),
+    environment: Optional[str] = Query(None, description="Filter by environment (indoor / outdoor)"),
+    search: Optional[str] = Query(None, description="Keyword search across filenames, labels, and scenes"),
+    sort_by: str = Query("created_at", description="Field to sort by"),
+    sort_order: str = Query("desc", description="Sort direction (asc / desc)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=100),
+    db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Apply modular computer vision enhancements and optionally run OCR."""
+    """Retrieve paginated image gallery records matching query filters."""
+    service = ImageService(db)
+    items, total = service.list_gallery(
+        category=category,
+        label=label,
+        environment=environment,
+        search=search,
+        page=page,
+        page_size=page_size,
+    )
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": max(1, (total + page_size - 1) // page_size),
+        "items": [img.to_dict() for img in items],
+    }
+
+
+@router.get(
+    "/images/{image_id}",
+    summary="Retrieve detailed image record with detections and DNA fingerprint",
+)
+def get_image_endpoint(image_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Fetch complete metadata, bounding boxes, dominant colors, and composition for an image."""
+    service = ImageService(db)
+    img = service.get_image(image_id)
+    if not img:
+        raise HTTPException(status_code=404, detail=f"Image #{image_id} not found.")
+
+    res = img.to_dict()
+    res["detections"] = [d.to_dict() for d in img.detections]
+    res["dna"] = img.dna.to_dict() if img.dna else {}
+    res["anomaly"] = img.anomaly.to_dict() if img.anomaly else None
+    return res
+
+
+@router.delete(
+    "/images/{image_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an image and its cascading detections and DNA records",
+)
+def delete_image_endpoint(image_id: int, db: Session = Depends(get_db)) -> None:
+    """Delete image entity and remove cascading foreign key children."""
+    success = delete_image(db, image_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Image #{image_id} not found.")
+
+
+@router.post(
+    "/search",
+    summary="Natural language semantic image search",
+)
+def search_images_endpoint(
+    payload: SearchRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Search images using natural language queries powered by CLIP text-to-image similarity."""
+    service = SearchService(db)
+    results = service.natural_language_search(query=payload.query, limit=payload.limit or 20)
+    return {
+        "query": payload.query,
+        "total_results": len(results),
+        "results": results,
+    }
+
+
+@router.post(
+    "/ask",
+    summary="Ask Your Images: Rule-based visual intelligence Q&A",
+)
+def ask_images_endpoint(
+    payload: AskRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Query the image database using natural language questions without requiring an LLM."""
+    service = SearchService(db)
+    res = service.ask_images(payload.question)
+    return {
+        "question": res.question,
+        "understood": res.understood,
+        "intent": res.intent,
+        "answer": res.answer,
+        "total_found": res.total_found,
+        "images": res.images,
+        "suggestions": res.suggestions,
+    }
+
+
+@router.post(
+    "/similar",
+    summary="Reverse image search across multiple similarity modes",
+)
+async def similar_images_endpoint(
+    file: UploadFile = File(...),
+    mode: str = Form("overall", description="Mode: 'overall', 'object', 'color', or 'scene'"),
+    limit: int = Form(12),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Find stored images visually or structurally similar to an uploaded query image."""
     content = await file.read()
     if not content:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+        raise HTTPException(status_code=400, detail="Empty query image provided.")
 
-    result = ImageProcessingService.process_and_preview(
-        image_bytes=content,
-        rotate_deg=rotate_deg,
-        grayscale=grayscale,
-        denoise=denoise,
-        gaussian_blur=gaussian_blur,
-        sharpen=sharpen,
-        threshold_method=threshold_method,
-        clahe=clahe,
-        perspective=perspective,
-        run_ocr=run_ocr,
-        engine_name=engine,
-    )
-    return result
-
-
-@api_router.get("/stats", summary="Get dashboard performance metrics")
-def get_stats_endpoint(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Retrieve operational KPIs, category ratios, and time-series history."""
-    service = StatsService(db)
-    return service.get_dashboard_data()
+    dna_service = DnaService(db)
+    try:
+        similar = dna_service.find_similar_by_image(
+            image_bytes=content,
+            mode=mode,
+            limit=limit,
+        )
+        return {
+            "mode": mode,
+            "total_matches": len(similar),
+            "matches": similar,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Similarity search failed: {exc}") from exc
 
 
-@api_router.get("/analytics", summary="Get complete analytics data for Chart.js")
-def get_analytics_endpoint(db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Retrieve category distribution, expense trends, and performance breakdowns."""
-    service = StatsService(db)
-    return service.get_full_analytics()
+@router.get(
+    "/analytics",
+    summary="Retrieve aggregated visual intelligence metrics for Chart.js",
+)
+def analytics_endpoint(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Compile database counts, top objects, category distributions, and monthly trends."""
+    service = AnalyticsService(db)
+    return service.get_dashboard_metrics()
 
 
-@api_router.get("/export", summary="Export document dataset or generate summary report")
-def export_dataset_endpoint(
-    format: str = Query("xlsx", pattern="^(xlsx|csv|json|summary)$"),
-    category: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
-) -> Response:
-    """Stream formatted Excel, CSV, JSON, or text summary report."""
-    service = ReportService(db)
-    payload, media_type, filename = service.generate_report(
-        export_format=format,
-        category=category,
-        status=status,
-        search_query=search,
-    )
-    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-    return Response(content=payload, media_type=media_type, headers=headers)
+@router.get(
+    "/status",
+    summary="Retrieve runtime database and model health diagnostic",
+)
+def status_endpoint() -> Dict[str, Any]:
+    """Return runtime connection health and engine identity."""
+    return {
+        "database": get_db_status(),
+        "models": {
+            "object_detector": "YOLOv8n (Ultralytics)",
+            "embedder": "CLIP ViT-B-32",
+        },
+    }

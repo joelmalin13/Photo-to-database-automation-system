@@ -1,7 +1,7 @@
-"""Database engine setup, initialization, and connection lifecycle.
+"""Database engine setup, initialization, and connection lifecycle management.
 
-Supports MySQL (via mysql-connector-python) with automatic fallback to SQLite
-if MySQL is unreachable, ensuring zero downtime and resilient startup.
+Connects to MySQL 8.0+ by default; automatically falls back to local SQLite
+if MySQL is unreachable, ensuring zero downtime and resilient server startup.
 """
 
 from __future__ import annotations
@@ -9,20 +9,18 @@ from __future__ import annotations
 from contextlib import contextmanager
 import re
 from typing import Any, Dict, Generator
-
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from config.settings import (
     DATABASE_URL,
-    DEFAULT_MYSQL_URL,
     DEFAULT_SQLITE_URL,
     logger,
 )
 from db.models import Base
 
-# Database status tracking state
+# Global database health status tracking
 _db_status: Dict[str, Any] = {
     "engine_name": "unknown",
     "is_fallback": False,
@@ -33,7 +31,7 @@ _db_status: Dict[str, Any] = {
 
 
 def _mask_url(url: str) -> str:
-    """Mask password credentials in database connection URI."""
+    """Mask sensitive database credentials in URI string."""
     return re.sub(r":([^:@]+)@", ":****@", url)
 
 
@@ -42,7 +40,7 @@ def create_resilient_engine() -> Engine:
     global _db_status
     target_url = DATABASE_URL
 
-    # If test memory URL requested, return directly
+    # In-memory test database
     if target_url.startswith("sqlite:///:memory:"):
         _db_status = {
             "engine_name": "SQLite (In-Memory)",
@@ -67,7 +65,7 @@ def create_resilient_engine() -> Engine:
                 pool_recycle=3600,
                 echo=False,
             )
-            # Test ping
+            # Test active ping
             with mysql_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
 
@@ -75,7 +73,7 @@ def create_resilient_engine() -> Engine:
                 "engine_name": "MySQL 8.0+",
                 "is_fallback": False,
                 "connected": True,
-                "message": "Connected to MySQL server (photo_automation).",
+                "message": "Connected to MySQL database (pixelmind).",
                 "url_masked": _mask_url(target_url),
             }
             logger.info("MySQL database connection verified successfully.")
@@ -140,7 +138,7 @@ def init_db() -> None:
 
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
-    """Provide a transactional database session context manager."""
+    """Context manager yielding a transactional database session."""
     session: Session = SessionFactory()
     try:
         yield session
@@ -148,6 +146,19 @@ def get_db_session() -> Generator[Session, None, None]:
     except Exception as exc:
         session.rollback()
         logger.error("Transaction rolled back due to exception: %s", exc)
+        raise
+    finally:
+        session.close()
+
+
+def get_db() -> Generator[Session, None, None]:
+    """FastAPI dependency for injecting transactional database sessions into routes."""
+    session: Session = SessionFactory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
         raise
     finally:
         session.close()

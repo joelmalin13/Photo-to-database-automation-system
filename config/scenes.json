@@ -1,0 +1,28 @@
+{
+  "scenes": [
+    {"label": "street", "environment": "outdoor", "description": "city street or roadway with buildings or vehicles"},
+    {"label": "highway", "environment": "outdoor", "description": "open highway or expressway"},
+    {"label": "living room", "environment": "indoor", "description": "residential living room with furniture"},
+    {"label": "office", "environment": "indoor", "description": "modern corporate office or workspace with desks"},
+    {"label": "kitchen", "environment": "indoor", "description": "kitchen or food preparation area with appliances"},
+    {"label": "park", "environment": "outdoor", "description": "green public park, trees, lawn, or garden"},
+    {"label": "beach", "environment": "outdoor", "description": "ocean beach, coastline, sand, and water"},
+    {"label": "mountain", "environment": "outdoor", "description": "mountainous terrain, hills, or rocky peaks"},
+    {"label": "classroom", "environment": "indoor", "description": "school classroom or university lecture hall"},
+    {"label": "restaurant", "environment": "indoor", "description": "restaurant dining room, cafe, or bar"},
+    {"label": "stadium", "environment": "outdoor", "description": "sports stadium or athletic field"},
+    {"label": "forest", "environment": "outdoor", "description": "dense forest, woods, or nature trail"}
+  ],
+  "environments": ["indoor", "outdoor"],
+  "canonical_categories": [
+    "Nature",
+    "Animals",
+    "Vehicles",
+    "Technology",
+    "Food",
+    "Architecture",
+    "Human activities",
+    "Sports",
+    "Electronics"
+  ]
+}

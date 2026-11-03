@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Ask Your Images | PIXELMIND Q&A{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8" x-data="{ currentQ: '' }">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">Ask Your Images</h1>
+    <p class="text-sm text-gray-500 mt-1">Rule-based natural language visual query engine. Translates questions into safe parameterized SQL queries.</p>
+  </div>
+
+  <!-- Question Input Card -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
+    <form 
+      id="askForm"
+      hx-post="/partials/ask-response"
+      hx-target="#askContainer"
+      hx-indicator="#loadingIndicator"
+      class="relative"
+    >
+      <input 
+        type="text" 
+        id="questionInput"
+        name="question"
+        x-model="currentQ"
+        placeholder="e.g. 'How many cars have been detected across all images?' or 'Find images containing dogs'..."
+        required
+        class="w-full text-sm font-medium rounded-xl border border-gray-300 pl-4 pr-28 py-3.5 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition shadow-inner"
+      >
+      <button 
+        type="submit" 
+        class="absolute right-2.5 top-2.5 px-5 py-2 bg-[#C62828] text-white text-xs font-bold rounded-lg hover:bg-red-700 transition flex items-center space-x-1.5 shadow-sm"
+      >
+        <span>Ask</span>
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+      </button>
+    </form>
+
+    <!-- Required 6 Example Question Pills -->
+    <div>
+      <div class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2.5">
+        Official Core Question Benchmarks (Click to execute):
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button 
+          type="button" 
+          @click="submitQuestion('How many cars have been detected across all images?')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          1. &ldquo;How many cars have been detected across all images?&rdquo;
+        </button>
+        <button 
+          type="button" 
+          @click="submitQuestion('Find images containing dogs')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          2. &ldquo;Find images containing dogs&rdquo;
+        </button>
+        <button 
+          type="button" 
+          @click="submitQuestion('Show images containing both people and motorcycles')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          3. &ldquo;Show images containing both people and motorcycles&rdquo;
+        </button>
+        <button 
+          type="button" 
+          @click="submitQuestion('Which image contains the maximum number of objects?')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          4. &ldquo;Which image contains the maximum number of objects?&rdquo;
+        </button>
+        <button 
+          type="button" 
+          @click="submitQuestion('Show all outdoor images containing at least two vehicles and one person')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          5. &ldquo;Show all outdoor images containing at least two vehicles and one person&rdquo;
+        </button>
+        <button 
+          type="button" 
+          @click="submitQuestion('Find all images containing electronic devices')"
+          class="text-left text-xs bg-gray-50 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3.5 py-2 rounded-lg border border-gray-200 transition"
+        >
+          6. &ldquo;Find all images containing electronic devices&rdquo;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loadingIndicator" class="htmx-indicator flex items-center justify-center space-x-2 py-6 text-gray-500">
+    <svg class="animate-spin w-5 h-5 text-[#C62828]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+    <span class="text-xs font-semibold">Parsing natural language intent and executing query...</span>
+  </div>
+
+  <!-- Answer Response Container -->
+  <div id="askContainer"></div>
+</div>
+
+<script>
+function submitQuestion(q) {
+  const input = document.getElementById('questionInput');
+  input.value = q;
+  htmx.trigger('#askForm', 'submit');
+}
+</script>
+{% endblock %}

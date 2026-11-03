@@ -1,0 +1,184 @@
+"""Reverse visual intelligence and similarity matching service for PixelMind.
+
+Implements reverse image search across four selectable modes:
+1. Object similarity (Jaccard index on object counts and labels)
+2. Colour similarity (Palette Euclidean distance in RGB space)
+3. Scene similarity (Scene category and environment match)
+4. Overall similarity (Cosine distance across CLIP 512-dim embeddings)
+"""
+
+from __future__ import annotations
+
+import io
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+import numpy as np
+from PIL import Image as PILImage
+from sqlalchemy.orm import Session
+
+from core.detector_base import get_detector
+from core.dna import extract_dominant_colors
+from core.embedder import ClipEmbedder
+from core.scene import classify_scene
+from core.similarity import (
+    compute_color_similarity,
+    compute_object_similarity,
+    compute_overall_similarity,
+    compute_scene_similarity,
+)
+from db.crud import get_all_dna_for_similarity, get_image_by_id
+
+
+class DnaService:
+    """Service providing reverse image search and visual fingerprint comparison."""
+
+    def __init__(self, db: Session) -> None:
+        self.db = db
+        self.embedder = ClipEmbedder.get_instance()
+
+    def find_similar_by_image(
+        self,
+        image_bytes: bytes,
+        mode: str = "overall",
+        limit: int = 12,
+    ) -> List[Dict[str, Any]]:
+        """Find stored images similar to an uploaded query image across the selected mode."""
+        stored_items = get_all_dna_for_similarity(self.db)
+        if not stored_items:
+            return []
+
+        pil_img = PILImage.open(io.BytesIO(image_bytes)).convert("RGB")
+        mode_clean = mode.strip().lower()
+
+        scored_results: List[Tuple[Any, float]] = []
+
+        # Mode 1: Object Similarity
+        if mode_clean == "object":
+            # Temporary save for YOLO detector
+            temp_path = Path("data") / "temp_query.jpg"
+            pil_img.save(temp_path)
+            try:
+                detector = get_detector("yolo")
+                q_det = detector.detect(temp_path, save_annotated=False)
+                q_items = q_det.items
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()
+
+            for img, dna, detections in stored_items:
+                sim = compute_object_similarity(q_items, detections)
+                scored_results.append((img, sim))
+
+        # Mode 2: Colour Similarity
+        elif mode_clean == "color":
+            q_colors = extract_dominant_colors(pil_img, num_colors=5)
+            for img, dna, detections in stored_items:
+                t_colors = (dna.dominant_colors_json if dna else []) or []
+                sim = compute_color_similarity(q_colors, t_colors)
+                scored_results.append((img, sim))
+
+        # Mode 3: Scene Similarity
+        elif mode_clean == "scene":
+            temp_path = Path("data") / "temp_query.jpg"
+            pil_img.save(temp_path)
+            try:
+                q_scene, q_env = classify_scene(temp_path, self.embedder)
+            finally:
+                if temp_path.exists():
+                    temp_path.unlink()
+
+            for img, dna, detections in stored_items:
+                sim = compute_scene_similarity(q_scene, q_env, img.scene, img.environment)
+                scored_results.append((img, sim))
+
+        # Mode 4: Overall CLIP Similarity (Default)
+        else:
+            q_vec = self.embedder.embed_image(pil_img)
+            for img, dna, detections in stored_items:
+                if dna and dna.embedding_blob:
+                    try:
+                        t_vec = np.frombuffer(dna.embedding_blob, dtype=np.float32)
+                        sim = compute_overall_similarity(q_vec, t_vec)
+                    except Exception:
+                        sim = 0.0
+                else:
+                    sim = 0.0
+                scored_results.append((img, sim))
+
+        # Sort by similarity descending
+        scored_results.sort(key=lambda x: x[1], reverse=True)
+
+        output: List[Dict[str, Any]] = []
+        for img, sim in scored_results[:limit]:
+            img_dict = img.to_dict()
+            img_dict["similarity_score"] = round(sim, 3)
+            img_dict["similarity_percentage"] = int(round(sim * 100))
+            output.append(img_dict)
+
+        return output
+
+    def find_similar_to_stored(
+        self,
+        image_id: int,
+        mode: str = "overall",
+        limit: int = 6,
+    ) -> List[Dict[str, Any]]:
+        """Find stored images similar to an existing image record."""
+        target_img = get_image_by_id(self.db, image_id)
+        if not target_img:
+            return []
+
+        stored_items = get_all_dna_for_similarity(self.db)
+        # Exclude the target image itself
+        other_items = [item for item in stored_items if item[0].id != image_id]
+        if not other_items:
+            return []
+
+        mode_clean = mode.strip().lower()
+        scored_results: List[Tuple[Any, float]] = []
+
+        if mode_clean == "object":
+            for img, dna, detections in other_items:
+                sim = compute_object_similarity(target_img.detections, detections)
+                scored_results.append((img, sim))
+
+        elif mode_clean == "color":
+            q_colors = (target_img.dna.dominant_colors_json if target_img.dna else []) or []
+            for img, dna, detections in other_items:
+                t_colors = (dna.dominant_colors_json if dna else []) or []
+                sim = compute_color_similarity(q_colors, t_colors)
+                scored_results.append((img, sim))
+
+        elif mode_clean == "scene":
+            for img, dna, detections in other_items:
+                sim = compute_scene_similarity(target_img.scene, target_img.environment, img.scene, img.environment)
+                scored_results.append((img, sim))
+
+        else:
+            q_vec = None
+            if target_img.dna and target_img.dna.embedding_blob:
+                try:
+                    q_vec = np.frombuffer(target_img.dna.embedding_blob, dtype=np.float32)
+                except Exception:
+                    q_vec = None
+
+            for img, dna, detections in other_items:
+                if dna and dna.embedding_blob and q_vec is not None:
+                    try:
+                        t_vec = np.frombuffer(dna.embedding_blob, dtype=np.float32)
+                        sim = compute_overall_similarity(q_vec, t_vec)
+                    except Exception:
+                        sim = 0.0
+                else:
+                    sim = 0.0
+                scored_results.append((img, sim))
+
+        scored_results.sort(key=lambda x: x[1], reverse=True)
+        output: List[Dict[str, Any]] = []
+        for img, sim in scored_results[:limit]:
+            img_dict = img.to_dict()
+            img_dict["similarity_score"] = round(sim, 3)
+            img_dict["similarity_percentage"] = int(round(sim * 100))
+            output.append(img_dict)
+
+        return output

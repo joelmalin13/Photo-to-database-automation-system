@@ -1,0 +1,53 @@
+<!-- Partial Search Results Grid -->
+{% if results %}
+  <div class="space-y-4">
+    <div class="text-xs text-gray-500 font-medium">
+      Ranked <span class="font-bold text-gray-800">{{ results|length }}</span> matching image(s) by CLIP text-to-image similarity:
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      {% for img in results %}
+        <a href="/images/{{ img.id }}" class="group bg-white rounded-xl border border-[#E5E5E5] overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+          <div class="aspect-4/3 bg-gray-100 overflow-hidden relative">
+            <img src="/{{ img.stored_path }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
+            <!-- Similarity Score Pill -->
+            <div class="absolute top-2 right-2 bg-[#C62828] text-white text-[11px] font-black px-2 py-0.5 rounded shadow">
+              {{ (img.similarity_score * 100)|round(1) }}% Match
+            </div>
+            <span class="absolute bottom-2 left-2 bg-black/70 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded">
+              {{ img.category }}
+            </span>
+          </div>
+
+          <div class="p-3.5 flex-1 flex flex-col justify-between">
+            <div>
+              <div class="text-xs font-bold text-[#111111] truncate">{{ img.filename }}</div>
+              <div class="text-[10px] text-gray-400 mt-0.5 flex items-center space-x-1">
+                <span class="capitalize">{{ img.scene or 'General' }}</span>
+                <span>&bull;</span>
+                <span class="capitalize">{{ img.environment or 'Outdoor' }}</span>
+              </div>
+            </div>
+
+            <!-- Matched keywords -->
+            {% if img.matched_labels %}
+              <div class="mt-2.5 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                {% for lbl in img.matched_labels %}
+                  <span class="bg-red-50 text-[#C62828] border border-red-200 text-[10px] font-semibold px-1.5 py-0.2 rounded">
+                    &check; {{ lbl }}
+                  </span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+{% elif query %}
+  <div class="text-center py-16 bg-white rounded-xl border border-[#E5E5E5]">
+    <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    <p class="text-base font-bold text-gray-800">No images matched "{{ query }}"</p>
+    <p class="text-xs text-gray-400 mt-1">Try broadening your sentence description or searching for common objects.</p>
+  </div>
+{% endif %}

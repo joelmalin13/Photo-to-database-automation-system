@@ -18,14 +18,11 @@ python-dateutil>=2.9.0
 pandas>=2.2.0
 openpyxl>=3.1.2
 
-# Computer Vision & Preprocessing
+# Computer Vision, Object Detection & Multimodal Embeddings
 opencv-python-headless>=4.9.0
 pillow>=10.3.0
-
-# OCR & AI Extraction Engines
-easyocr>=1.7.0
-pytesseract>=0.3.10
-google-genai>=0.1.0
+ultralytics>=8.2.0
+open-clip-torch>=2.24.0
 torch>=2.2.0
 torchvision>=0.17.0
 

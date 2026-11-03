@@ -1,0 +1,70 @@
+<!-- Partial: Ask Your Images Response -->
+<div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-6">
+  <!-- Question & Answer Header -->
+  <div class="space-y-3">
+    <div class="flex items-center space-x-2">
+      <span class="w-6 h-6 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs font-bold">Q</span>
+      <span class="text-sm font-semibold text-gray-600">{{ result.question }}</span>
+    </div>
+
+    <!-- Answer Box -->
+    <div class="p-4 rounded-xl {% if result.understood %}bg-red-50/50 border border-red-100{% else %}bg-amber-50/50 border border-amber-200{% endif %} flex items-start space-x-3">
+      <div class="w-7 h-7 rounded-lg {% if result.understood %}bg-[#C62828] text-white{% else %}bg-amber-500 text-white{% endif %} flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">
+        A
+      </div>
+      <div>
+        <div class="text-base font-extrabold {% if result.understood %}text-gray-900{% else %}text-amber-900{% endif %}">
+          {{ result.answer }}
+        </div>
+        {% if result.understood %}
+          <div class="text-[11px] text-gray-400 mt-1">
+            Intent: <span class="font-mono font-semibold text-gray-600">{{ result.intent }}</span> &bull; Safe Parameterized SQL Query
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Matching Images Grid if any -->
+  {% if result.images %}
+    <div>
+      <div class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+        Matching Images ({{ result.total_found }})
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        {% for img in result.images %}
+          <a href="/images/{{ img.id }}" class="group block rounded-lg border border-gray-200 overflow-hidden bg-gray-50 hover:shadow-md transition">
+            <div class="aspect-square bg-gray-100 overflow-hidden relative">
+              <img src="/{{ img.stored_path }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition">
+              <span class="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded">
+                {{ img.category }}
+              </span>
+            </div>
+            <div class="p-2 bg-white">
+              <div class="text-[11px] font-bold text-gray-800 truncate">{{ img.filename }}</div>
+              <div class="text-[9px] text-gray-400 mt-0.5">{{ img.detections_count }} objects</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Example Suggestions if not understood -->
+  {% if not result.understood and result.suggestions %}
+    <div class="pt-4 border-t border-gray-100">
+      <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Supported Example Questions:</div>
+      <div class="flex flex-wrap gap-2">
+        {% for ex in result.suggestions %}
+          <button 
+            type="button" 
+            onclick="submitQuestion('{{ ex }}')"
+            class="text-xs bg-gray-100 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-left transition"
+          >
+            {{ ex }}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>

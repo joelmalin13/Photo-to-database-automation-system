@@ -37,11 +37,21 @@ ENV/
 .env.local
 .env.*.local
 
-# SnapBase runtime data & SQLite database
-data/snapbase.db
-data/logs/*.log
+# PixelMind & SnapBase runtime data & SQLite database
+data/*.db
+data/*.db-journal
+data/*.log
+data/annotated/*
+!data/annotated/.gitkeep
 data/uploads/*
 !data/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
+
+# Model weights
+*.pt
+*.onnx
+*.safetensors
 
 # Test & coverage caches
 .pytest_cache/

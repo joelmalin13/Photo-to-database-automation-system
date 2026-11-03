@@ -1,224 +1,98 @@
 {% extends "base.html" %}
 
+{% block title %}Settings | PIXELMIND Diagnostics{% endblock %}
+
 {% block content %}
-<div 
-  x-data="settingsManager()"
-  class="max-w-4xl space-y-6"
->
-  <!-- Page Header -->
-  <div class="pb-2">
-    <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">System Settings</h2>
-    <p class="text-xs text-gray-500 mt-1">Configure MySQL database connectivity, OCR extraction engines, verification thresholds, and upload limits.</p>
+<div class="max-w-4xl mx-auto space-y-8">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">System Settings & Health Diagnostics</h1>
+    <p class="text-sm text-gray-500 mt-1">Runtime connection status, AI model registries, and visual intelligence thresholds.</p>
   </div>
 
-  <!-- Form -->
-  <form @submit.prevent="saveSettings()" class="space-y-6">
+  <!-- Database Connection Diagnostic Card -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div>
+        <h2 class="text-base font-bold text-[#111111]">Database Architecture Health</h2>
+        <p class="text-xs text-gray-400">MySQL 8.0+ Primary with Zero-Downtime SQLite Fallback</p>
+      </div>
+      <span class="px-3 py-1 rounded-full text-xs font-bold {% if db_status.is_fallback %}bg-amber-100 text-amber-800{% else %}bg-emerald-100 text-emerald-800{% endif %}">
+        {% if db_status.is_fallback %}SQLite Fallback Active{% else %}MySQL Connected{% endif %}
+      </span>
+    </div>
 
-    <!-- Database Status Card (Specification 1) -->
-    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
-      <div class="flex items-center justify-between pb-3 border-b border-gray-100">
-        <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center">
-            <i data-lucide="database" class="w-4 h-4"></i>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+      <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <span class="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Active Engine</span>
+        <span class="font-bold text-gray-800 text-sm mt-0.5 block">{{ db_status.engine_name }}</span>
+      </div>
+      <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <span class="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Connection URI</span>
+        <span class="font-mono text-gray-700 text-xs mt-0.5 block truncate">{{ db_status.url_masked }}</span>
+      </div>
+    </div>
+
+    <div class="p-3.5 bg-gray-50 rounded-xl text-xs text-gray-600 border border-gray-200">
+      <span class="font-bold text-gray-800">Status Telemetry:</span> {{ db_status.message }}
+    </div>
+  </div>
+
+  <!-- Model Configuration -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-4">
+    <div class="border-b border-gray-100 pb-4">
+      <h2 class="text-base font-bold text-[#111111]">AI & Vision Model Stack</h2>
+      <p class="text-xs text-gray-400">Local CPU-friendly deep learning engines</p>
+    </div>
+
+    <div class="space-y-3">
+      <div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-gray-50">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-[#111111] text-white flex items-center justify-center font-bold text-xs">
+            Y8
           </div>
           <div>
-            <h3 class="text-sm font-bold text-gray-900">Database Engine & Connectivity</h3>
-            <p class="text-xs text-gray-500">MySQL 8.0+ configuration with zero-downtime SQLite automatic fallback.</p>
+            <div class="text-xs font-bold text-gray-800">YOLOv8n (Ultralytics)</div>
+            <div class="text-[10px] text-gray-500">80 COCO Classes &bull; Bounding Box Coordinates &bull; Confidence Tensors</div>
           </div>
         </div>
-
-        <div>
-          {% if db_status.is_fallback %}
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-            <span>SQLite Fallback Active</span>
-          </span>
-          {% else %}
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>MySQL Connected</span>
-          </span>
-          {% endif %}
-        </div>
+        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active</span>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-        <div class="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
-          <span class="text-gray-500 block mb-0.5">Active Database Backend</span>
-          <span class="font-bold text-gray-900 font-mono text-sm">{{ db_status.engine_name }}</span>
+      <div class="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 bg-gray-50">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-[#C62828] text-white flex items-center justify-center font-bold text-xs">
+            CL
+          </div>
+          <div>
+            <div class="text-xs font-bold text-gray-800">CLIP ViT-B-32 (OpenCLIP)</div>
+            <div class="text-[10px] text-gray-500">512-dim Normalized Latent Space &bull; Text-to-Image Cross-Modal &bull; Zero-Shot</div>
+          </div>
         </div>
-
-        <div class="p-3.5 rounded-lg bg-gray-50 border border-gray-200">
-          <span class="text-gray-500 block mb-0.5">Connection URI</span>
-          <span class="font-mono text-gray-800 truncate block">{{ db_status.url_masked }}</span>
-        </div>
-
-        <div class="md:col-span-2 p-3.5 rounded-lg border {% if db_status.is_fallback %}bg-amber-50/50 border-amber-200 text-amber-900{% else %}bg-emerald-50/50 border-emerald-200 text-emerald-900{% endif %}">
-          <span class="font-semibold block mb-1">Status Diagnostic:</span>
-          <span class="text-xs leading-relaxed font-mono">{{ db_status.message }}</span>
-        </div>
+        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded">Active</span>
       </div>
     </div>
+  </div>
 
-    <!-- Extraction Engine Configuration Card (Specification 2) -->
-    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
-      <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
-        <div class="w-8 h-8 rounded-lg bg-red-50 text-brand-red flex items-center justify-center">
-          <i data-lucide="cpu" class="w-4 h-4"></i>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-gray-900">OCR Recognition Engine</h3>
-          <p class="text-xs text-gray-500">Select the primary optical character recognition & extraction pipeline.</p>
-        </div>
+  <!-- Ingestion Limits -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm space-y-3">
+    <div class="border-b border-gray-100 pb-3">
+      <h2 class="text-base font-bold text-[#111111]">Ingestion Constraints</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+      <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <span class="text-[10px] text-gray-400 block font-bold uppercase">Max File Size</span>
+        <span class="font-bold text-gray-800 text-sm">15 MB</span>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <!-- Option 1: EasyOCR (Default) -->
-        <label 
-          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
-          :class="engine === 'ocr' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <input type="radio" name="engine" value="ocr" x-model="engine" class="text-brand-red focus:ring-brand-red">
-              <span class="text-sm font-bold text-gray-900">EasyOCR</span>
-            </div>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-red text-white">
-              Default
-            </span>
-          </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Deep learning CRAFT + ResNet-LSTM engine. Extracts word boxes and per-word confidence scores 100% locally.
-          </p>
-        </label>
-
-        <!-- Option 2: Tesseract OCR (Optional) -->
-        <label 
-          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
-          :class="engine === 'tesseract' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <input type="radio" name="engine" value="tesseract" x-model="engine" class="text-brand-red focus:ring-brand-red">
-              <span class="text-sm font-bold text-gray-900">Tesseract</span>
-            </div>
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
-              Optional
-            </span>
-          </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Classic open-source optical character engine using Page Segmentation Modes (PSM) and HOCR dictionary parsing.
-          </p>
-        </label>
-
-        <!-- Option 3: Gemini Vision (Optional) -->
-        <label 
-          class="relative flex flex-col p-4 rounded-xl border-2 cursor-pointer transition-all"
-          :class="engine === 'gemini' ? 'border-brand-red bg-red-50/20' : 'border-gray-200 hover:border-gray-300 bg-white'"
-        >
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <input type="radio" name="engine" value="gemini" x-model="engine" class="text-brand-red focus:ring-brand-red">
-              <span class="text-sm font-bold text-gray-900">Google Gemini</span>
-            </div>
-            {% if gemini_active %}
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Key Active
-            </span>
-            {% else %}
-            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
-              No Key
-            </span>
-            {% endif %}
-          </div>
-          <p class="text-xs text-gray-500 leading-relaxed">
-            Multi-modal cloud vision AI (`gemini-2.5-flash`) for complex structured layout reasoning.
-          </p>
-        </label>
-
+      <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <span class="text-[10px] text-gray-400 block font-bold uppercase">Permitted Formats</span>
+        <span class="font-bold text-gray-800 text-sm">JPG, PNG, WEBP</span>
+      </div>
+      <div class="p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <span class="text-[10px] text-gray-400 block font-bold uppercase">Duplicate Detection</span>
+        <span class="font-bold text-gray-800 text-sm">SHA-256 Unique Hash</span>
       </div>
     </div>
-
-    <!-- Confidence Gates & Upload Limits -->
-    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-5">
-      <div class="flex items-center gap-3 pb-3 border-b border-gray-100">
-        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-          <i data-lucide="sliders" class="w-4 h-4"></i>
-        </div>
-        <div>
-          <h3 class="text-sm font-bold text-gray-900">Verification Gates & Upload Limits</h3>
-          <p class="text-xs text-gray-500">Tune the threshold that flags extracted values for human review.</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="font-semibold text-gray-700">Minimum Review Threshold</span>
-            <span class="font-mono font-bold text-brand-red text-sm" x-text="threshold + '%'"></span>
-          </div>
-          <input 
-            type="range" 
-            min="40" 
-            max="95" 
-            step="5" 
-            x-model="threshold"
-            class="w-full accent-brand-red cursor-pointer"
-          >
-          <p class="text-[11px] text-gray-400 mt-2">
-            Fields extracted with confidence under <span class="font-semibold text-gray-700" x-text="threshold + '%'"></span> will be highlighted in red with warning badges during review.
-          </p>
-        </div>
-
-        <div class="p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-2">
-          <span class="font-semibold text-gray-800 block">File Restrictions</span>
-          <div class="flex justify-between">
-            <span class="text-gray-500">Max File Size:</span>
-            <span class="font-mono font-semibold text-gray-900">10 MB</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-500">Supported Formats:</span>
-            <span class="font-mono font-semibold text-gray-900">JPG, JPEG, PNG, WEBP</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-500">Duplicate Check:</span>
-            <span class="font-mono font-semibold text-emerald-700">SHA-256 Digest</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Form Submit -->
-    <div class="flex items-center justify-end gap-3 pt-2">
-      <button 
-        type="submit" 
-        class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red-hover transition-colors shadow-sm"
-      >
-        <i data-lucide="save" class="w-4 h-4"></i>
-        <span>Save Configuration</span>
-      </button>
-    </div>
-  </form>
+  </div>
 </div>
-
-<script>
-  function settingsManager() {
-    return {
-      engine: '{{ engine }}',
-      model: '{{ model }}',
-      threshold: {{ threshold }},
-
-      init() {
-        if (window.lucide) {
-          lucide.createIcons();
-        }
-      },
-
-      saveSettings() {
-        showToast('Settings saved successfully', 'success');
-      }
-    };
-  }
-</script>
 {% endblock %}

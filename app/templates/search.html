@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Natural Language Search | PIXELMIND{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ currentQuery: '{{ query }}' }">
+  <!-- Header Title -->
+  <div>
+    <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">Natural Language Image Search</h1>
+    <p class="text-sm text-gray-500 mt-1">Search the database using descriptive sentences. Powered by CLIP cross-modal text-to-image similarity.</p>
+  </div>
+
+  <!-- Search Input Bar -->
+  <div class="bg-white rounded-2xl border border-[#E5E5E5] p-5 shadow-sm space-y-4">
+    <div class="relative">
+      <input 
+        type="text" 
+        id="searchBar"
+        name="q"
+        value="{{ query }}"
+        x-model="currentQuery"
+        placeholder="Type a sentence, e.g. 'a red car parked beside a tree' or 'people walking in a city'..."
+        hx-get="/partials/search-results"
+        hx-trigger="keyup changed delay:350ms, search"
+        hx-target="#searchResults"
+        class="w-full text-sm font-medium rounded-xl border border-gray-300 pl-11 pr-24 py-3.5 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition shadow-inner"
+      >
+      <svg class="w-5 h-5 text-gray-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <button 
+        hx-get="/partials/search-results" 
+        hx-include="#searchBar" 
+        hx-target="#searchResults"
+        class="absolute right-2.5 top-2.5 px-4 py-2 bg-[#C62828] text-white text-xs font-bold rounded-lg hover:bg-red-700 transition"
+      >
+        Search
+      </button>
+    </div>
+
+    <!-- Example Query Chips -->
+    <div class="flex flex-wrap items-center gap-2 pt-1">
+      <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Try asking:</span>
+      <button 
+        type="button" 
+        @click="currentQuery = 'a red car parked beside a tree'; $nextTick(() => { document.getElementById('searchBar').dispatchEvent(new Event('search')); })"
+        class="text-xs bg-gray-100 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3 py-1 rounded-full transition"
+      >
+        &ldquo;a red car parked beside a tree&rdquo;
+      </button>
+      <button 
+        type="button" 
+        @click="currentQuery = 'people walking in an outdoor street'; $nextTick(() => { document.getElementById('searchBar').dispatchEvent(new Event('search')); })"
+        class="text-xs bg-gray-100 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3 py-1 rounded-full transition"
+      >
+        &ldquo;people walking in an outdoor street&rdquo;
+      </button>
+      <button 
+        type="button" 
+        @click="currentQuery = 'electronic devices on a desk'; $nextTick(() => { document.getElementById('searchBar').dispatchEvent(new Event('search')); })"
+        class="text-xs bg-gray-100 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3 py-1 rounded-full transition"
+      >
+        &ldquo;electronic devices on a desk&rdquo;
+      </button>
+      <button 
+        type="button" 
+        @click="currentQuery = 'green nature and trees'; $nextTick(() => { document.getElementById('searchBar').dispatchEvent(new Event('search')); })"
+        class="text-xs bg-gray-100 hover:bg-red-50 hover:text-[#C62828] text-gray-700 font-medium px-3 py-1 rounded-full transition"
+      >
+        &ldquo;green nature and trees&rdquo;
+      </button>
+    </div>
+  </div>
+
+  <!-- Search Results Container -->
+  <div id="searchResults">
+    {% include "partials/search_results.html" %}
+  </div>
+</div>
+{% endblock %}

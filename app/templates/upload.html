@@ -1,310 +1,216 @@
 {% extends "base.html" %}
 
+{% block title %}Upload Photos | PIXELMIND{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-6" x-data="uploadManager()">
+<div class="max-w-4xl mx-auto space-y-8" x-data="uploadHandler()">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">Upload & Ingest Photographs</h1>
+    <p class="text-sm text-gray-500 mt-1">Detect objects with YOLOv8n, extract Image DNA (K-Means colors & pHash), and compute CLIP embeddings.</p>
+  </div>
 
-  <!-- Header Card -->
-  <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <div>
-      <h2 class="text-base font-bold text-gray-900">Ingest Document Photographs</h2>
-      <p class="text-xs text-gray-500 mt-0.5">Upload single/batch image files or capture directly using your camera</p>
+  <!-- Settings Bar -->
+  <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex items-center space-x-3 w-full sm:w-auto">
+      <label for="confThreshold" class="text-xs font-bold text-gray-700 whitespace-nowrap">YOLO Confidence:</label>
+      <input 
+        id="confThreshold" 
+        type="range" 
+        min="0.10" 
+        max="0.80" 
+        step="0.05" 
+        x-model="confidenceThreshold" 
+        class="w-36 accent-[#C62828] cursor-pointer"
+      >
+      <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-800" x-text="`${Math.round(confidenceThreshold * 100)}%`"></span>
     </div>
-
-    <!-- Mode Selector Controls -->
-    <div class="flex items-center gap-3">
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 mb-1">Document Schema</label>
-        <select x-model="selectedDocType" class="text-xs font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-red">
-          <option value="auto">Auto-detect Type</option>
-          {% for key, val in schemas.items() %}
-          <option value="{{ key }}">{{ val.display_name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-gray-600 mb-1">Extraction Engine</label>
-        <select x-model="selectedEngine" class="text-xs font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-red">
-          <option value="">Auto (Preferred)</option>
-          {% if gemini_active %}
-          <option value="gemini">Gemini Vision (Cloud)</option>
-          {% endif %}
-          <option value="ocr">Offline OCR (EasyOCR)</option>
-        </select>
-      </div>
+    <div class="text-xs text-gray-400">
+      Supported formats: JPG, PNG, WEBP (Max 15MB)
     </div>
   </div>
 
-  <!-- Drag and Drop Zone -->
+  <!-- Drag and Drop Box -->
   <div 
-    class="border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all bg-white"
-    :class="isDragging ? 'border-brand-red bg-red-50/30 ring-4 ring-red-50' : 'border-gray-300 hover:border-gray-400'"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
     @drop.prevent="handleDrop($event)"
+    :class="isDragging ? 'border-[#C62828] bg-red-50/40' : 'border-gray-300 bg-white'"
+    class="border-2 border-dashed rounded-2xl p-10 text-center transition duration-150 shadow-sm relative"
   >
-    <div class="max-w-md mx-auto space-y-4">
-      <div class="w-14 h-14 rounded-full bg-red-50 text-brand-red flex items-center justify-center mx-auto">
-        <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+    <input 
+      type="file" 
+      id="fileInput" 
+      multiple 
+      accept=".jpg,.jpeg,.png,.webp"
+      @change="handleFileSelect($event)" 
+      class="hidden"
+    >
+    <div class="flex flex-col items-center justify-center space-y-4">
+      <div class="w-16 h-16 rounded-full bg-red-50 text-[#C62828] flex items-center justify-center">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
       </div>
-
       <div>
-        <h3 class="text-sm font-bold text-gray-900">Drag and drop document photos here</h3>
-        <p class="text-xs text-gray-500 mt-1">Supports JPG, PNG, WEBP files up to 10MB each</p>
-      </div>
-
-      <div class="flex items-center justify-center gap-3 pt-2">
-        <label class="px-4 py-2 text-xs font-semibold rounded-lg btn-primary cursor-pointer inline-flex items-center gap-1.5">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>Browse Files</span>
-          <input type="file" multiple accept=".jpg,.jpeg,.png,.webp" class="hidden" @change="handleFileSelect($event)">
+        <label for="fileInput" class="cursor-pointer text-sm font-bold text-[#C62828] hover:underline">
+          Click to browse files
         </label>
-
-        <button 
-          type="button"
-          @click="openCameraModal()"
-          class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 inline-flex items-center gap-1.5 transition-colors"
-        >
-          <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-          <span>Camera Snapshot</span>
-        </button>
+        <span class="text-sm text-gray-500"> or drag and drop photos here</span>
+        <p class="text-xs text-gray-400 mt-1">Process multiple images simultaneously</p>
       </div>
     </div>
   </div>
 
-  <!-- Selected Files Queue & Live Status -->
-  <div x-show="queue.length > 0" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" style="display: none;">
-    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-sm font-bold text-gray-900">Upload Queue</span>
-        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-semibold" x-text="`${queue.length} file(s)`"></span>
+  <!-- Selected Files Preview List -->
+  <template x-if="selectedFiles.length > 0">
+    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-800" x-text="`Selected Files (${selectedFiles.length})`"></h3>
+        <button @click="clearFiles()" class="text-xs text-gray-400 hover:text-red-600 transition font-medium">Clear All</button>
       </div>
 
-      <button 
-        type="button" 
-        @click="processQueue()"
-        :disabled="isUploading || queue.every(f => f.status === 'done')"
-        class="px-4 py-1.5 text-xs font-bold rounded-lg btn-primary inline-flex items-center gap-2 disabled:opacity-50"
-      >
-        <i data-lucide="play" class="w-3 h-3"></i>
-        <span x-text="isUploading ? 'Processing Pipeline...' : 'Process All Documents'"></span>
-      </button>
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        <template x-for="(f, idx) in selectedFiles" :key="idx">
+          <div class="relative group rounded-lg border border-gray-200 p-1.5 bg-gray-50">
+            <img :src="f.previewUrl" class="w-full aspect-square object-cover rounded">
+            <button 
+              @click="removeFile(idx)"
+              class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#111111] text-white rounded-full flex items-center justify-center text-xs hover:bg-[#C62828] transition"
+              title="Remove"
+            >
+              &times;
+            </button>
+            <div class="text-[10px] text-gray-600 truncate mt-1 px-0.5" x-text="f.name"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-2 flex justify-end">
+        <button 
+          @click="startUpload()"
+          :disabled="isUploading"
+          class="inline-flex items-center space-x-2 px-6 py-2.5 bg-[#C62828] text-white rounded-lg text-sm font-bold hover:bg-red-700 disabled:opacity-50 transition shadow-sm"
+        >
+          <svg x-show="!isUploading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+          <svg x-show="isUploading" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          <span x-text="isUploading ? 'Analyzing & Detecting...' : 'Ingest & Process Images'"></span>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Processed Results Section -->
+  <div x-show="processedResults.length > 0" class="space-y-4" x-cloak>
+    <div class="flex items-center justify-between">
+      <h2 class="text-base font-bold text-[#111111]">Processing Results</h2>
+      <span class="text-xs text-gray-500" x-text="`Processed ${processedResults.length} image(s)`"></span>
     </div>
 
-    <!-- Items list -->
-    <div class="divide-y divide-gray-100">
-      <template x-for="(item, idx) in queue" :key="idx">
-        <div class="p-4 flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3 min-w-0">
-            <template x-if="item.preview">
-              <img :src="item.preview" class="w-12 h-12 rounded object-cover border border-gray-200 flex-shrink-0">
-            </template>
-            <div class="min-w-0">
-              <div class="text-xs font-semibold text-gray-900 truncate" x-text="item.file.name"></div>
-              <div class="text-[11px] text-gray-400 mt-0.5" x-text="formatBytes(item.file.size)"></div>
-            </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <template x-for="item in processedResults" :key="item.id">
+        <div class="bg-white rounded-xl border border-[#E5E5E5] p-4 shadow-sm flex space-x-4">
+          <div class="w-24 h-24 rounded-lg bg-gray-100 overflow-hidden shrink-0">
+            <img :src="`/${item.stored_path}`" class="w-full h-full object-cover">
           </div>
-
-          <!-- Per-item status & progress -->
-          <div class="flex items-center gap-4 flex-shrink-0">
-            <!-- Progress bar -->
-            <div x-show="item.status === 'uploading'" class="w-28 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-              <div class="bg-brand-red h-1.5 rounded-full animate-pulse w-full"></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-[#111111] truncate" x-text="item.filename"></span>
+              <span 
+                :class="item.is_duplicate ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
+                class="text-[10px] font-semibold px-2 py-0.5 rounded"
+                x-text="item.is_duplicate ? 'Duplicate' : 'Ingested'"
+              ></span>
             </div>
 
-            <!-- Badges -->
-            <template x-if="item.status === 'ready'">
-              <span class="text-xs font-medium text-gray-500">Ready</span>
-            </template>
-            <template x-if="item.status === 'uploading'">
-              <span class="text-xs font-semibold text-brand-red animate-pulse">Extracting...</span>
-            </template>
-            <template x-if="item.status === 'done'">
-              <div class="flex items-center gap-2">
-                <template x-if="item.result && item.result.is_duplicate">
-                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                    Duplicate
-                  </span>
-                </template>
-                <template x-if="item.result && !item.result.is_duplicate">
-                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Extracted
-                  </span>
-                </template>
-                <template x-if="item.result && item.result.document_id">
-                  <a :href="`/review/${item.result.document_id}`" class="text-xs font-bold text-brand-red hover:underline inline-flex items-center gap-1">
-                    <span>Review #<span x-text="item.result.document_id"></span></span>
-                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
-                  </a>
-                </template>
-              </div>
-            </template>
-            <template x-if="item.status === 'error'">
-              <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200" x-text="item.error"></span>
-            </template>
+            <div class="mt-1 flex items-center space-x-2 text-xs text-gray-500">
+              <span class="font-semibold text-gray-700" x-text="item.category"></span>
+              <span>&bull;</span>
+              <span class="capitalize" x-text="item.environment || 'General'"></span>
+            </div>
 
-            <!-- Remove Button -->
-            <button 
-              type="button" 
-              x-show="!isUploading" 
-              @click="removeQueueItem(idx)" 
-              class="text-gray-400 hover:text-gray-600 p-1"
-            >
-              <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
+            <div class="mt-2 text-xs text-gray-600 flex items-center justify-between">
+              <span x-text="`${item.detections_count || 0} objects detected`"></span>
+              <a :href="`/images/${item.id}`" class="text-[#C62828] font-bold hover:underline flex items-center space-x-1">
+                <span>View Details</span>
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+            </div>
           </div>
         </div>
       </template>
     </div>
   </div>
-
-  <!-- Camera Capture Modal -->
-  <div 
-    x-show="cameraActive" 
-    class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-    style="display: none;"
-  >
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-sm font-bold text-gray-900">Webcam Document Snapshot</h3>
-        <button @click="closeCameraModal()" class="text-gray-400 hover:text-gray-600">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="relative bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center">
-        <video id="webcam-stream" autoplay playsinline class="w-full h-full object-cover"></video>
-      </div>
-
-      <div class="flex justify-end gap-3 pt-2">
-        <button type="button" @click="closeCameraModal()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-          Cancel
-        </button>
-        <button type="button" @click="capturePhoto()" class="px-4 py-2 text-xs font-bold rounded-lg btn-primary inline-flex items-center gap-1.5">
-          <i data-lucide="aperture" class="w-3.5 h-3.5"></i>
-          <span>Capture Frame</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <script>
-function uploadManager() {
+function uploadHandler() {
   return {
     isDragging: false,
     isUploading: false,
-    cameraActive: false,
-    selectedDocType: 'auto',
-    selectedEngine: '',
-    queue: [],
-    videoStream: null,
+    confidenceThreshold: 0.25,
+    selectedFiles: [],
+    processedResults: [],
 
-    handleDrop(e) {
+    handleFileSelect(event) {
+      this.addFiles(Array.from(event.target.files));
+    },
+
+    handleDrop(event) {
       this.isDragging = false;
-      const files = Array.from(e.dataTransfer.files);
-      this.addFiles(files);
+      if (event.dataTransfer.files) {
+        this.addFiles(Array.from(event.dataTransfer.files));
+      }
     },
-    handleFileSelect(e) {
-      const files = Array.from(e.target.files);
-      this.addFiles(files);
-    },
+
     addFiles(files) {
-      files.forEach(f => {
-        const item = {
-          file: f,
-          status: 'ready',
-          preview: null,
-          result: null,
-          error: null,
-        };
-        const reader = new FileReader();
-        reader.onload = (e) => { item.preview = e.target.result; };
-        reader.readAsDataURL(f);
-        this.queue.push(item);
-      });
-      setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
-    },
-    removeQueueItem(idx) {
-      this.queue.splice(idx, 1);
-    },
-    formatBytes(bytes) {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    },
-    async processQueue() {
-      this.isUploading = true;
-      for (let i = 0; i < this.queue.length; i++) {
-        const item = this.queue[i];
-        if (item.status === 'done') continue;
-
-        item.status = 'uploading';
-        const formData = new FormData();
-        formData.append('files', item.file);
-        formData.append('doc_type', this.selectedDocType);
-        if (this.selectedEngine) {
-          formData.append('preferred_engine', this.selectedEngine);
-        }
-
-        try {
-          const res = await fetch('/api/documents', {
-            method: 'POST',
-            body: formData,
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          this.selectedFiles.push({
+            file: file,
+            name: file.name,
+            previewUrl: URL.createObjectURL(file)
           });
-          if (!res.ok) {
-            const errJson = await res.json().catch(() => ({ detail: 'Upload error' }));
-            throw new Error(errJson.detail || errJson.error || 'Upload failed');
-          }
-          const data = await res.json();
-          item.status = 'done';
-          item.result = data.documents[0];
-          window.showToast(`Processed ${item.file.name}`, 'success');
-        } catch (err) {
-          item.status = 'error';
-          item.error = err.message;
-          window.showToast(err.message, 'error');
         }
-      }
-      this.isUploading = false;
-      setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+      });
     },
-    async openCameraModal() {
-      this.cameraActive = true;
+
+    removeFile(idx) {
+      URL.revokeObjectURL(this.selectedFiles[idx].previewUrl);
+      this.selectedFiles.splice(idx, 1);
+    },
+
+    clearFiles() {
+      this.selectedFiles.forEach(f => URL.revokeObjectURL(f.previewUrl));
+      this.selectedFiles = [];
+    },
+
+    async startUpload() {
+      if (this.selectedFiles.length === 0) return;
+      this.isUploading = true;
+
+      const formData = new FormData();
+      this.selectedFiles.forEach(f => formData.append('files', f.file));
+      formData.append('confidence_threshold', this.confidenceThreshold);
+
       try {
-        this.videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const video = document.getElementById('webcam-stream');
-        if (video) video.srcObject = this.videoStream;
+        const response = await fetch('/api/images', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        if (response.ok && data.images) {
+          this.processedResults = data.images;
+          this.clearFiles();
+        } else {
+          alert('Upload failed: ' + (data.detail || data.error || 'Unknown error'));
+        }
       } catch (err) {
-        window.showToast('Webcam access was not granted.', 'error');
-        this.cameraActive = false;
+        alert('Network error occurred during upload: ' + err.message);
+      } finally {
+        this.isUploading = false;
       }
-    },
-    closeCameraModal() {
-      this.cameraActive = false;
-      if (this.videoStream) {
-        this.videoStream.getTracks().forEach(t => t.stop());
-        this.videoStream = null;
-      }
-    },
-    capturePhoto() {
-      const video = document.getElementById('webcam-stream');
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      canvas.toBlob((blob) => {
-        const file = new File([blob], `camera_snap_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        this.addFiles([file]);
-        this.closeCameraModal();
-      }, 'image/jpeg', 0.95);
     }
-  };
+  }
 }
 </script>
 {% endblock %}

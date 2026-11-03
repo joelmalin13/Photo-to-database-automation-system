@@ -1,0 +1,632 @@
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:23:34] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 14:23:48] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:31] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 14:33:38] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 14:33:41] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 14:33:43] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.137 seconds
+[2026-11-03 14:33:43] [INFO] [snapbase]: Persisted document id=1 (test_run_receipt_2.png, receipt_invoice)
+[2026-11-03 14:33:43] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:43] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:33:43] [INFO] [snapbase]: Preprocessed image saved to fc9351549c_batch1.png (blur_score=0.0)
+[2026-11-03 14:33:43] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.209 seconds
+[2026-11-03 14:33:43] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:33:43] [INFO] [snapbase]: Persisted document id=2 (batch1.png, generic_table)
+[2026-11-03 14:33:43] [INFO] [snapbase]: Preprocessed image saved to 2c9185f926_batch2.png (blur_score=0.0)
+[2026-11-03 14:33:43] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.195 seconds
+[2026-11-03 14:33:43] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:33:43] [INFO] [snapbase]: Persisted document id=3 (batch2.png, generic_table)
+[2026-11-03 14:33:43] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:33:43] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:34:42] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:34:42] [INFO] [snapbase]: SnapBase Inbox Watcher active. Monitoring: C:\MY PROJECTS\Photo to database automation system\inbox
+[2026-11-03 14:34:42] [INFO] [snapbase]: Detected new document photo in inbox: invoice_1.png
+[2026-11-03 14:34:42] [INFO] [snapbase]: Preprocessed image saved to 07ca4e49bf_invoice_1.png (blur_score=2268.4)
+[2026-11-03 14:34:49] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 14:34:52] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 14:34:55] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.670 seconds
+[2026-11-03 14:34:55] [INFO] [snapbase]: Persisted document id=4 (invoice_1.png, receipt_invoice)
+[2026-11-03 14:34:55] [INFO] [snapbase]: Successfully ingested invoice_1.png (Doc ID: 4, Hash: 07ca4e49bf)
+[2026-11-03 14:34:55] [INFO] [snapbase]: Moved invoice_1.png -> invoice_1.png
+[2026-11-03 14:34:55] [INFO] [snapbase]: Detected new document photo in inbox: receipt_1.png
+[2026-11-03 14:34:55] [INFO] [snapbase]: Preprocessed image saved to 148cb592e7_receipt_1.png (blur_score=3316.3)
+[2026-11-03 14:34:58] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.258 seconds
+[2026-11-03 14:34:58] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['tax_amount']
+[2026-11-03 14:34:58] [INFO] [snapbase]: Persisted document id=5 (receipt_1.png, receipt_invoice)
+[2026-11-03 14:34:58] [INFO] [snapbase]: Successfully ingested receipt_1.png (Doc ID: 5, Hash: 148cb592e7)
+[2026-11-03 14:34:58] [INFO] [snapbase]: Moved receipt_1.png -> receipt_1.png
+[2026-11-03 14:34:58] [INFO] [snapbase]: Detected new document photo in inbox: receipt_2.png
+[2026-11-03 14:34:58] [INFO] [snapbase]: Successfully ingested receipt_2.png (Doc ID: 1, Hash: fc001cb914)
+[2026-11-03 14:34:58] [INFO] [snapbase]: Moved receipt_2.png -> receipt_2.png
+[2026-11-03 14:34:58] [INFO] [snapbase]: Detected new document photo in inbox: student_id_1.png
+[2026-11-03 14:34:59] [INFO] [snapbase]: Preprocessed image saved to b97063fbf3_student_id_1.png (blur_score=3478.7)
+[2026-11-03 14:35:00] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.407 seconds
+[2026-11-03 14:35:00] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['invoice_number', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 14:35:00] [INFO] [snapbase]: Persisted document id=6 (student_id_1.png, receipt_invoice)
+[2026-11-03 14:35:00] [INFO] [snapbase]: Successfully ingested student_id_1.png (Doc ID: 6, Hash: b97063fbf3)
+[2026-11-03 14:35:00] [INFO] [snapbase]: Moved student_id_1.png -> student_id_1.png
+[2026-11-03 14:35:00] [INFO] [snapbase]: Detected new document photo in inbox: table_1.png
+[2026-11-03 14:35:01] [INFO] [snapbase]: Preprocessed image saved to e3eaffe645_table_1.png (blur_score=3350.8)
+[2026-11-03 14:35:03] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.267 seconds
+[2026-11-03 14:35:03] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 14:35:03] [INFO] [snapbase]: Persisted document id=7 (table_1.png, receipt_invoice)
+[2026-11-03 14:35:03] [INFO] [snapbase]: Successfully ingested table_1.png (Doc ID: 7, Hash: e3eaffe645)
+[2026-11-03 14:35:03] [INFO] [snapbase]: Moved table_1.png -> table_1.png
+[2026-11-03 14:35:03] [INFO] [snapbase]: Initial scan processed 5 file(s).
+[2026-11-03 14:35:03] [INFO] [snapbase]: Single pass complete. Exiting watcher.
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:36:31] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:36:31] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 14:37:00] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 14:37:07] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 14:37:10] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 14:37:12] [INFO] [snapbase]: Executed OCRExtractor.extract in 11.425 seconds
+[2026-11-03 14:37:12] [INFO] [snapbase]: Persisted document id=1 (test_run_receipt_2.png, receipt_invoice)
+[2026-11-03 14:37:12] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_receipt_first.png (blur_score=1938.0)
+[2026-11-03 14:37:13] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.478 seconds
+[2026-11-03 14:37:13] [INFO] [snapbase]: Persisted document id=1 (receipt_first.png, receipt_invoice)
+[2026-11-03 14:37:13] [INFO] [snapbase]: Preprocessed image saved to fc9351549c_batch1.png (blur_score=0.0)
+[2026-11-03 14:37:14] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.185 seconds
+[2026-11-03 14:37:14] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:37:14] [INFO] [snapbase]: Persisted document id=1 (batch1.png, generic_table)
+[2026-11-03 14:37:14] [INFO] [snapbase]: Preprocessed image saved to 2c9185f926_batch2.png (blur_score=0.0)
+[2026-11-03 14:37:14] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.173 seconds
+[2026-11-03 14:37:14] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:37:14] [INFO] [snapbase]: Persisted document id=2 (batch2.png, generic_table)
+[2026-11-03 14:37:14] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:37:14] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:37:32] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 14:37:56] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 14:37:57] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 14:38:04] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 14:38:07] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 14:38:09] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.154 seconds
+[2026-11-03 14:38:09] [INFO] [snapbase]: Persisted document id=1 (test_run_receipt_2.png, receipt_invoice)
+[2026-11-03 14:38:09] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_receipt_first.png (blur_score=1938.0)
+[2026-11-03 14:38:10] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.547 seconds
+[2026-11-03 14:38:10] [INFO] [snapbase]: Persisted document id=1 (receipt_first.png, receipt_invoice)
+[2026-11-03 14:38:10] [INFO] [snapbase]: Preprocessed image saved to fc9351549c_batch1.png (blur_score=0.0)
+[2026-11-03 14:38:11] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.200 seconds
+[2026-11-03 14:38:11] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:38:11] [INFO] [snapbase]: Persisted document id=1 (batch1.png, generic_table)
+[2026-11-03 14:38:11] [INFO] [snapbase]: Preprocessed image saved to 2c9185f926_batch2.png (blur_score=0.0)
+[2026-11-03 14:38:11] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.180 seconds
+[2026-11-03 14:38:11] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 14:38:11] [INFO] [snapbase]: Persisted document id=2 (batch2.png, generic_table)
+[2026-11-03 14:38:11] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:38:11] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 14:56:21] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:19:55] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:19:55] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:19:56] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:19:56] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:19:56] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:19:56] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_test_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:20:05] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 15:20:08] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 15:20:09] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.916 seconds
+[2026-11-03 15:20:09] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:20:09] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:20:09] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:20:09] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:20:09] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:20:09] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_grocery_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:20:09] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.179 seconds
+[2026-11-03 15:20:09] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:20:09] [INFO] [snapbase]: Persisted document id=1 (grocery_receipt.jpg, receipt_invoice)
+[2026-11-03 15:20:09] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:20:09] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:20:09] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:20:09] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_lifecycle_test.jpg (blur_score=0.0)
+[2026-11-03 15:20:09] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.173 seconds
+[2026-11-03 15:20:09] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:20:09] [INFO] [snapbase]: Persisted document id=1 (lifecycle_test.jpg, receipt_invoice)
+[2026-11-03 15:20:09] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:20:09] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:20:09] [INFO] [snapbase]: Updated document 1 status to rejected
+[2026-11-03 15:20:09] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:20:09] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:20:10] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:20:10] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:20:10] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_export_test.jpg (blur_score=0.0)
+[2026-11-03 15:20:10] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.154 seconds
+[2026-11-03 15:20:10] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:20:10] [INFO] [snapbase]: Persisted document id=1 (export_test.jpg, receipt_invoice)
+[2026-11-03 15:20:11] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:20:11] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:20:11] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:20:11] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 15:20:11] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .png, .jpg, .webp, .jpeg
+[2026-11-03 15:20:11] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:20:11] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:20:11] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:20:11] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:04] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:04] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:04] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:04] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:04] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:04] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_test_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:21:12] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 15:21:15] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 15:21:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 11.369 seconds
+[2026-11-03 15:21:15] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:15] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:21:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:16] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:16] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_grocery_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:21:16] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.197 seconds
+[2026-11-03 15:21:16] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:16] [INFO] [snapbase]: Persisted document id=1 (grocery_receipt.jpg, receipt_invoice)
+[2026-11-03 15:21:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:16] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:16] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_lifecycle_test.jpg (blur_score=0.0)
+[2026-11-03 15:21:16] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.166 seconds
+[2026-11-03 15:21:16] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:16] [INFO] [snapbase]: Persisted document id=1 (lifecycle_test.jpg, receipt_invoice)
+[2026-11-03 15:21:16] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:21:16] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:21:16] [INFO] [snapbase]: Updated document 1 status to rejected
+[2026-11-03 15:21:16] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:21:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:16] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:16] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_export_test.jpg (blur_score=0.0)
+[2026-11-03 15:21:16] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.183 seconds
+[2026-11-03 15:21:16] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:16] [INFO] [snapbase]: Persisted document id=1 (export_test.jpg, receipt_invoice)
+[2026-11-03 15:21:17] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:17] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:17] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:17] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 15:21:17] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .jpg, .webp, .png, .jpeg
+[2026-11-03 15:21:17] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:17] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:17] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:17] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:39] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:39] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:39] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:40] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:40] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:40] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_test_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:21:47] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 15:21:50] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 15:21:50] [INFO] [snapbase]: Executed OCRExtractor.extract in 10.679 seconds
+[2026-11-03 15:21:50] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:50] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:21:50] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:50] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:50] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:50] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_grocery_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:21:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.172 seconds
+[2026-11-03 15:21:51] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:51] [INFO] [snapbase]: Persisted document id=1 (grocery_receipt.jpg, receipt_invoice)
+[2026-11-03 15:21:51] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:51] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:51] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:51] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_lifecycle_test.jpg (blur_score=0.0)
+[2026-11-03 15:21:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.173 seconds
+[2026-11-03 15:21:51] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:51] [INFO] [snapbase]: Persisted document id=1 (lifecycle_test.jpg, receipt_invoice)
+[2026-11-03 15:21:51] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:21:51] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:21:51] [INFO] [snapbase]: Updated document 1 status to rejected
+[2026-11-03 15:21:51] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:21:51] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:51] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:51] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:51] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_export_test.jpg (blur_score=0.0)
+[2026-11-03 15:21:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.171 seconds
+[2026-11-03 15:21:51] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:21:51] [INFO] [snapbase]: Persisted document id=1 (export_test.jpg, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:52] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:52] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:52] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 15:21:52] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .webp, .jpeg, .jpg, .png
+[2026-11-03 15:21:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:52] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:21:52] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:21:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 15:21:52] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 15:21:53] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 15:21:55] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.729 seconds
+[2026-11-03 15:21:55] [INFO] [snapbase]: Persisted document id=1 (test_run_receipt_2.png, receipt_invoice)
+[2026-11-03 15:21:55] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_receipt_first.png (blur_score=1938.0)
+[2026-11-03 15:21:56] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.502 seconds
+[2026-11-03 15:21:56] [INFO] [snapbase]: Persisted document id=1 (receipt_first.png, receipt_invoice)
+[2026-11-03 15:21:56] [INFO] [snapbase]: Preprocessed image saved to fc9351549c_batch1.png (blur_score=0.0)
+[2026-11-03 15:21:57] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.202 seconds
+[2026-11-03 15:21:57] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 15:21:57] [INFO] [snapbase]: Persisted document id=1 (batch1.png, generic_table)
+[2026-11-03 15:21:57] [INFO] [snapbase]: Preprocessed image saved to 2c9185f926_batch2.png (blur_score=0.0)
+[2026-11-03 15:21:57] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.222 seconds
+[2026-11-03 15:21:57] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 15:21:57] [INFO] [snapbase]: Persisted document id=2 (batch2.png, generic_table)
+[2026-11-03 15:21:57] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 15:21:57] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 15:27:53] [INFO] [snapbase]: Updated document 5 status to processed
+[2026-11-03 15:28:03] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:03] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:03] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:03] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:03] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:03] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_test_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:28:11] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 15:28:14] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 15:28:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 11.166 seconds
+[2026-11-03 15:28:15] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:28:15] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:15] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:15] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_grocery_receipt.jpg (blur_score=0.0)
+[2026-11-03 15:28:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.169 seconds
+[2026-11-03 15:28:15] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:28:15] [INFO] [snapbase]: Persisted document id=1 (grocery_receipt.jpg, receipt_invoice)
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:15] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:15] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_lifecycle_test.jpg (blur_score=0.0)
+[2026-11-03 15:28:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.206 seconds
+[2026-11-03 15:28:15] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:28:15] [INFO] [snapbase]: Persisted document id=1 (lifecycle_test.jpg, receipt_invoice)
+[2026-11-03 15:28:15] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:28:15] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:28:15] [INFO] [snapbase]: Updated document 1 status to rejected
+[2026-11-03 15:28:15] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:15] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:15] [INFO] [snapbase]: Preprocessed image saved to 0fac444864_export_test.jpg (blur_score=0.0)
+[2026-11-03 15:28:16] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.190 seconds
+[2026-11-03 15:28:16] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['vendor_name', 'invoice_number', 'date', 'total_amount', 'tax_amount', 'payment_method']
+[2026-11-03 15:28:16] [INFO] [snapbase]: Persisted document id=1 (export_test.jpg, receipt_invoice)
+[2026-11-03 15:28:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:16] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:16] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 15:28:16] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .jpeg, .png, .jpg, .webp
+[2026-11-03 15:28:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:28:16] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:28:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 15:28:16] [INFO] [snapbase]: Persisted document id=1 (test_receipt.jpg, receipt_invoice)
+[2026-11-03 15:28:16] [INFO] [snapbase]: Persisted document id=1 (invoice.png, receipt_invoice)
+[2026-11-03 15:28:16] [INFO] [snapbase]: Updated document 1 status to processed
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=1 (slip.png, receipt_invoice)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Updated fields for document 1 (is_edited=True)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=1 (student_badge.png, student_id_form)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=2 (grocery_slip.jpg, receipt_invoice)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=1 (temp.png, generic_table)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Deleted document id=1
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=1 (d1.png, receipt_invoice)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Persisted document id=2 (d2.png, receipt_invoice)
+[2026-11-03 15:28:17] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_test_run_receipt_2.png (blur_score=1938.0)
+[2026-11-03 15:28:19] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.681 seconds
+[2026-11-03 15:28:19] [INFO] [snapbase]: Persisted document id=1 (test_run_receipt_2.png, receipt_invoice)
+[2026-11-03 15:28:19] [INFO] [snapbase]: Preprocessed image saved to fc001cb914_receipt_first.png (blur_score=1938.0)
+[2026-11-03 15:28:21] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.576 seconds
+[2026-11-03 15:28:21] [INFO] [snapbase]: Persisted document id=1 (receipt_first.png, receipt_invoice)
+[2026-11-03 15:28:21] [INFO] [snapbase]: Preprocessed image saved to fc9351549c_batch1.png (blur_score=0.0)
+[2026-11-03 15:28:21] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.199 seconds
+[2026-11-03 15:28:21] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 15:28:21] [INFO] [snapbase]: Persisted document id=1 (batch1.png, generic_table)
+[2026-11-03 15:28:21] [INFO] [snapbase]: Preprocessed image saved to 2c9185f926_batch2.png (blur_score=0.0)
+[2026-11-03 15:28:21] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.184 seconds
+[2026-11-03 15:28:21] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['table_title', 'record_date', 'total_rows', 'summary_notes']
+[2026-11-03 15:28:21] [INFO] [snapbase]: Persisted document id=2 (batch2.png, generic_table)
+[2026-11-03 15:28:21] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 15:28:21] [WARNING] [snapbase]: Document receipt_invoice has low-confidence fields: ['total_amount']
+[2026-11-03 15:32:50] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:32:50] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:38:55] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 15:38:55] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:41:58] [INFO] [snapbase]: Database initialized successfully at sqlite:///C:/MY PROJECTS/Photo to database automation system/data/snapbase.db
+[2026-11-03 15:57:53] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 15:57:53] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 15:57:53] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:10:05] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:10:05] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:10:06] [ERROR] [snapbase]: Transaction rolled back due to exception: (sqlite3.OperationalError) no such column: documents.user_id
+[SQL: SELECT documents.id, documents.user_id, documents.filename, documents.image_path, documents.image_hash, documents.category, documents.ocr_text, documents.ocr_confidence, documents.status, documents.raw_fields_json, documents.created_at, documents.updated_at 
+FROM documents 
+WHERE documents.image_hash = ?]
+[parameters: ('78b42706801cee1a3267fd26003ab9ae9086ca469037ffd8d6eee2935d567f85',)]
+(Background on this error at: https://sqlalche.me/e/21/e3q8)
+[2026-11-03 16:10:15] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:10:15] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:11:01] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:11:01] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:11:01] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:11:09] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:11:09] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:11:24] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:11:27] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:11:29] [INFO] [snapbase]: Executed OCRExtractor.extract in 20.012 seconds
+[2026-11-03 16:11:29] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:12:04] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:12:04] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:12:12] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:12:15] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:12:17] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.175 seconds
+[2026-11-03 16:12:17] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:12:18] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.748 seconds
+[2026-11-03 16:12:18] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:12:20] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.671 seconds
+[2026-11-03 16:12:20] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:12:22] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.663 seconds
+[2026-11-03 16:12:24] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.837 seconds
+[2026-11-03 16:12:24] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:12:26] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.390 seconds
+[2026-11-03 16:12:29] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.368 seconds
+[2026-11-03 16:12:31] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.430 seconds
+[2026-11-03 16:12:34] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.500 seconds
+[2026-11-03 16:12:36] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.328 seconds
+[2026-11-03 16:12:37] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.297 seconds
+[2026-11-03 16:12:37] [WARNING] [snapbase]: Document business_cards has low-confidence fields: ['designation', 'company_name', 'email', 'website']
+[2026-11-03 16:12:39] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.329 seconds
+[2026-11-03 16:12:39] [WARNING] [snapbase]: Document business_cards has low-confidence fields: ['designation', 'company_name', 'email', 'website']
+[2026-11-03 16:12:40] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.419 seconds
+[2026-11-03 16:12:40] [WARNING] [snapbase]: Document business_cards has low-confidence fields: ['designation', 'company_name', 'email', 'website']
+[2026-11-03 16:12:41] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.243 seconds
+[2026-11-03 16:12:41] [WARNING] [snapbase]: Document business_cards has low-confidence fields: ['designation', 'company_name', 'email', 'website']
+[2026-11-03 16:12:43] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.295 seconds
+[2026-11-03 16:12:43] [WARNING] [snapbase]: Document business_cards has low-confidence fields: ['designation', 'company_name', 'email', 'website']
+[2026-11-03 16:14:04] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:14:04] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:16:33] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:16:33] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:16:35] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:35] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:37] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:37] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:37] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:44] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:16:47] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:16:47] [INFO] [snapbase]: Executed OCRExtractor.extract in 9.968 seconds
+[2026-11-03 16:16:47] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:47] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:47] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:47] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:47] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.137 seconds
+[2026-11-03 16:16:47] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:47] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:47] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:47] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:48] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.133 seconds
+[2026-11-03 16:16:48] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:48] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:48] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.131 seconds
+[2026-11-03 16:16:48] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:48] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:48] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:48] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 16:16:48] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .jpg, .webp, .jpeg, .png
+[2026-11-03 16:16:48] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:49] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:16:49] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:16:49] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:16:52] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.520 seconds
+[2026-11-03 16:16:52] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:16:54] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.421 seconds
+[2026-11-03 16:16:54] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:16:54] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.194 seconds
+[2026-11-03 16:16:54] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:54] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.187 seconds
+[2026-11-03 16:16:54] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:16:54] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:16:54] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:19:00] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:19:01] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:19:03] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:03] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:03] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:03] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:03] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:11] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:19:14] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:19:14] [INFO] [snapbase]: Executed OCRExtractor.extract in 10.665 seconds
+[2026-11-03 16:19:14] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:14] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:14] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:14] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:14] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.159 seconds
+[2026-11-03 16:19:14] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:14] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:15] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.190 seconds
+[2026-11-03 16:19:15] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:15] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:15] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.170 seconds
+[2026-11-03 16:19:15] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:15] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:15] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:15] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:16] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:16] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 16:19:16] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .jpg, .jpeg, .png, .webp
+[2026-11-03 16:19:16] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:16] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:19:16] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:19:17] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:19:20] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.526 seconds
+[2026-11-03 16:19:20] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:19:21] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.474 seconds
+[2026-11-03 16:19:21] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:19:22] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.225 seconds
+[2026-11-03 16:19:22] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:22] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.152 seconds
+[2026-11-03 16:19:22] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:19:22] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:19:22] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:20:37] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:20:37] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:20:39] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:39] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:40] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:40] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:40] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:48] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:20:50] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:20:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 10.836 seconds
+[2026-11-03 16:20:51] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:51] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:51] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:51] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.151 seconds
+[2026-11-03 16:20:51] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:51] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:51] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:51] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:51] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.140 seconds
+[2026-11-03 16:20:51] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:51] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:52] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:52] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.223 seconds
+[2026-11-03 16:20:52] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:52] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:52] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:52] [ERROR] [snapbase]: SnapBaseError intercepted: Uploaded file is empty (0 bytes).
+[2026-11-03 16:20:52] [ERROR] [snapbase]: SnapBaseError intercepted: File format '.txt' unsupported. Allowed: .webp, .jpg, .jpeg, .png
+[2026-11-03 16:20:52] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:53] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:20:53] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:20:53] [INFO] [snapbase]: SnapBase FastAPI server shutting down...
+[2026-11-03 16:20:56] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.580 seconds
+[2026-11-03 16:20:56] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:20:57] [INFO] [snapbase]: Executed OCRExtractor.extract in 1.394 seconds
+[2026-11-03 16:20:57] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['phone', 'subtotal']
+[2026-11-03 16:20:58] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.198 seconds
+[2026-11-03 16:20:58] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:58] [INFO] [snapbase]: Executed OCRExtractor.extract in 0.168 seconds
+[2026-11-03 16:20:58] [WARNING] [snapbase]: Document generic_table has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:20:58] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:20:58] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['total_amount']
+[2026-11-03 16:22:32] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:22:32] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:22:34] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:22:34] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:36:12] [INFO] [snapbase]: Attempting connection to MySQL: mysql+mysqlconnector://root:@localhost:3306/photo_automation
+[2026-11-03 16:36:13] [WARNING] [snapbase]: MySQL is unreachable ((mysql.connector.errors.ProgrammingError) 1045 (28000): Access denied for user 'root'@'localhost' (using password: NO)
+(Background on this error at: https://sqlalche.me/e/21/f405)). Initiating automatic fallback to local SQLite.
+[2026-11-03 16:36:14] [INFO] [snapbase]: SnapBase FastAPI server starting up...
+[2026-11-03 16:36:14] [INFO] [snapbase]: Database initialized successfully on SQLite (Fallback)
+[2026-11-03 16:37:35] [INFO] [snapbase]: Initializing EasyOCR reader (CPU mode)...
+[2026-11-03 16:37:38] [INFO] [snapbase]: EasyOCR reader initialized successfully.
+[2026-11-03 16:37:40] [INFO] [snapbase]: Executed OCRExtractor.extract in 12.311 seconds
+[2026-11-03 16:37:40] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
+[2026-11-03 16:39:02] [INFO] [snapbase]: Executed OCRExtractor.extract in 2.598 seconds
+[2026-11-03 16:39:02] [WARNING] [snapbase]: Document receipts has low-confidence fields: ['shop_name', 'receipt_number', 'date', 'phone', 'subtotal', 'tax_amount', 'total_amount']
