@@ -179,6 +179,30 @@ def get_db_status() -> Dict[str, Any]:
     return dict(_db_status)
 
 
+def _migrate_sqlite_schema(eng: Engine) -> None:
+    """Safely add missing columns to existing SQLite databases."""
+    try:
+        with eng.connect() as conn:
+            # Check images columns
+            res = conn.execute(text("PRAGMA table_info(images)"))
+            existing_cols = {row[1] for row in res.fetchall()}
+            if existing_cols:
+                if "status" not in existing_cols:
+                    conn.execute(text("ALTER TABLE images ADD COLUMN status VARCHAR(32) DEFAULT 'done'"))
+                if "caption" not in existing_cols:
+                    conn.execute(text("ALTER TABLE images ADD COLUMN caption TEXT"))
+
+            # Check image_dna columns
+            res = conn.execute(text("PRAGMA table_info(image_dna)"))
+            dna_cols = {row[1] for row in res.fetchall()}
+            if dna_cols:
+                if "embedding_json" not in dna_cols:
+                    conn.execute(text("ALTER TABLE image_dna ADD COLUMN embedding_json JSON"))
+            conn.commit()
+    except Exception as exc:
+        logger.debug("SQLite schema migration check: %s", exc)
+
+
 def init_db() -> None:
     """Initialize database tables idempotently with thread-safe guard."""
     global _tables_initialized
@@ -192,6 +216,8 @@ def init_db() -> None:
         if not _tables_initialized:
             try:
                 Base.metadata.create_all(bind=engine)
+                if "sqlite" in str(engine.url):
+                    _migrate_sqlite_schema(engine)
                 _tables_initialized = True
                 logger.info("Database schema initialized successfully on %s", _db_status.get("engine_name", "database"))
             except Exception as exc:
