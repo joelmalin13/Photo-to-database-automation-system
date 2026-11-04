@@ -1,49 +1,54 @@
-"""Domain-specific exception hierarchy for PixelMind visual intelligence system.
+"""Domain exception definitions for SnapBase application.
+
+Defines a clean exception hierarchy for extraction, validation,
+image processing, duplicate detection, and database operations.
 """
 
 from __future__ import annotations
 
 
-class PixelMindError(Exception):
-    """Base exception for all PixelMind system errors."""
+class SnapBaseError(Exception):
+    """Base exception for all domain-specific SnapBase errors."""
 
-    def __init__(self, message: str, status_code: int = 500) -> None:
+    def __init__(self, message: str, details: dict | None = None) -> None:
         super().__init__(message)
         self.message = message
-        self.status_code = status_code
+        self.details = details or {}
+
+    def __str__(self) -> str:
+        if self.details:
+            return f"{self.message} | Details: {self.details}"
+        return self.message
 
 
-class DetectionError(PixelMindError):
-    """Raised when YOLO inference or box rendering fails."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message, status_code=502)
+class ExtractionError(SnapBaseError):
+    """Raised when text or structured extraction from an image fails."""
 
 
-class EmbedderError(PixelMindError):
-    """Raised when CLIP embedding extraction or similarity computation fails."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message, status_code=502)
+class ValidationError(SnapBaseError):
+    """Raised when extracted field data fails schema or type validation."""
 
 
-class DuplicateImageError(PixelMindError):
-    """Raised when an identical image has already been ingested (SHA-256 collision)."""
+class DuplicateImageError(SnapBaseError):
+    """Raised when an identical image has already been ingested into the system."""
 
-    def __init__(self, message: str, existing_id: int) -> None:
-        super().__init__(message, status_code=409)
-        self.existing_id = existing_id
+    def __init__(
+        self,
+        message: str,
+        image_hash: str,
+        existing_document_id: int | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            {"image_hash": image_hash, "document_id": existing_document_id},
+        )
+        self.image_hash = image_hash
+        self.existing_document_id = existing_document_id
 
 
-class InvalidImageError(PixelMindError):
-    """Raised when an uploaded file is empty, corrupt, or unsupported."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message, status_code=400)
+class PreprocessError(SnapBaseError):
+    """Raised when image preprocessing (rotation, contrast, etc.) encounters an issue."""
 
 
-class QueryParseError(PixelMindError):
-    """Raised when a natural language query cannot be parsed into a database query."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message, status_code=400)
+class DatabaseError(SnapBaseError):
+    """Raised when an unexpected error occurs during database operations."""

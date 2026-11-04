@@ -1,274 +1,255 @@
-# PIXELMIND: AI-Powered Visual Intelligence Database
+# Photo to Database Automation System
+### Turn a photo of a receipt into clean, searchable data
 
-> *"Every Image Has Data. Make It Searchable."*
-
-[![Vercel Deployment](https://img.shields.io/badge/Vercel-Serverless%20Ready-black.svg?logo=vercel)](https://vercel.com/)
-[![Python 3.12](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111%2B-009688.svg)](https://fastapi.tiangolo.com/)
-[![Google Gemini](https://img.shields.io/badge/Gemini%202.5%20Flash-Vision%20%26%20Embeddings-4285F4.svg?logo=google)](https://aistudio.google.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%26%20Storage-3ECF8E.svg?logo=supabase)](https://supabase.com/)
-[![Bundle Size](https://img.shields.io/badge/Serverless%20Bundle-167%20MB%20(%3C%20400%20MB)-brightgreen.svg)]()
+[![SQLite](https://img.shields.io/badge/Database-SQLite-blue.svg)](https://www.sqlite.org/)
+[![EasyOCR](https://img.shields.io/badge/OCR-EasyOCR-brightgreen.svg)](https://github.com/JaidedAI/EasyOCR)
+[![OpenCV](https://img.shields.io/badge/Vision-OpenCV-red.svg)](https://opencv.org/)
 
----
-
-## Live Demo & Public Link
-
-- **Production Vercel URL:** `https://your-pixelmind-app.vercel.app` *(Deploy below)*
-- **Live Tunnel (Temporary):** `https://basket-significantly-acknowledged-outcomes.trycloudflare.com`
-- **Health Telemetry:** `GET /health`
+**100% Python | OCR + SQLite | You Verify Every Record**  
+*KLE Technological University, Hubballi — B.E. Computer Science & Engineering (2025-2026)*
 
 ---
 
 ## Overview
 
-**PixelMind** is an enterprise visual intelligence platform that ingests unstructured photographs, automatically detects objects, classifies scene environments, computes an authoritative **Image DNA** visual fingerprint, persists structured records across hosted relational databases, and renders them instantly searchable via **natural language sentences**, **semantic reverse visual similarity**, and **interactive conversational queries**.
+The **Photo to Database Automation System** turns photos of physical receipts into clean, searchable, relational database records. Built with FastAPI, SQLite, OpenCV, EasyOCR, Pandas, and Tailwind CSS/HTMX, the system replaces slow, error-prone manual data entry with an automated 6-step pipeline backed by human-in-the-loop verification.
 
-Designed from the ground up with **Dual-Mode AI Architecture**, PixelMind operates seamlessly in two environments:
-1. **Cloud Serverless Mode (Vercel)**: Zero heavy deep-learning bundle (< 170 MB uncompressed, strictly under Vercel's 500 MB ceiling). Uses **Google Gemini 2.5 Flash** for single-call structured vision and **text-embedding-004**, **Supabase Storage** for assets, and **Supabase / Neon PostgreSQL** (or MySQL) via SQLAlchemy `NullPool`.
-2. **Local Workstation Mode**: Offline CPU-friendly **YOLOv8n** (Ultralytics) + **OpenCLIP ViT-B-32**, pure Pillow / NumPy color clustering, and local filesystem / SQLite / MySQL storage.
+### 6-Step Pipeline (Slide 3)
+1. **Upload**: Drag-and-drop or 1-click ABC MART demo receipt.
+2. **Clean**: OpenCV preprocessing (grayscale, noise reduction, deskew, adaptive thresholding).
+3. **Read**: EasyOCR text extraction with bounding boxes and per-word confidence.
+4. **Find**: Regex pattern extraction (shop_name, date, phone, email, pincode, 	otal_amount).
+5. **Check**: Human-in-the-loop split-screen review (● Looks good vs ● Please check amber flags, and auto-check validation rules).
+6. **Save**: Stored in SQLite database table 
+eceipts with Spending Dashboard, 'Ask Your Receipts' natural language queries, and 1-click Excel export.
 
 ---
 
-## Dual-Mode System Architecture
+## Key System Pillars
+
+1. **Enterprise Database Architecture (MySQL 8.0+ with Zero-Downtime Fallback)**:
+   - Primary database: MySQL 8.0+ via `mysql-connector-python` using connection pooling.
+   - Resilient startup: If MySQL is unreachable, the system logs a diagnostic message, reflects fallback status on the Settings page, and automatically fails over to a local SQLite database (`data/snapbase.db`) without crashing.
+   - Tests run in an isolated in-memory SQLite database (`sqlite:///:memory:`).
+2. **Strict Data Integrity Boundary**:
+   - Unverified raw OCR output is never directly inserted into confirmed business tables.
+   - Ingested records remain in staging (`documents` table with status `processed`).
+   - Only upon human verification are records promoted to confirmed tables: `receipts` (with line items), `students` (with marks), or `business_cards`.
+3. **Pluggable OCR Architecture**:
+   - **Default Engine**: EasyOCR (character recognition, bounding boxes, word-level confidence).
+   - **Optional Engine**: Tesseract OCR (with automated EasyOCR fallback if the system binary is missing).
+   - **Optional Engine**: Google Gemini Multimodal Vision API.
+4. **Multi-Domain Document Awareness**:
+   - **Receipts / Invoices**: Merchant name, invoice/receipt number, date, phone, line items (qty, price, amount), subtotal, tax, total amount.
+   - **Student Marksheets**: Student name, USN/registration number, college, semester, subject rows (code, marks, max), total, percentage, pass/fail result.
+   - **Business Cards**: Person name, job title, company, phone, email, website, postal address.
+5. **Interactive Computer Vision Playground (`/image-processing`)**:
+   - Side-by-side interactive visual comparison between the original photo and processed outputs.
+   - Real-time adjustment controls: Grayscale, Gaussian Blur, Laplacian Denoising, Morphological Sharpening, Otsu/Adaptive Thresholding, CLAHE Contrast, Auto-Deskew, and Perspective Correction.
+   - On-demand **Run OCR** and **Retry OCR after enhancement** buttons with per-word confidence tags.
+6. **Pandas Data Cleaning Engine**:
+   - Automated whitespace collapse, date standardization to ISO-8601 (`YYYY-MM-DD`), phone number sanitization, email format validation, and currency parsing.
+   - Suspicious and low-confidence field flags preventing erroneous business ledger updates.
+7. **Human-in-the-Loop Split-View Review (`/review`)**:
+   - Interactive zoomable and pannable image viewer on the left; structured editable form on the right.
+   - Confidence meters with visual warnings for fields scoring under 70%.
+   - Keyboard shortcuts: `Ctrl+Enter` to approve and promote to confirmed business tables; `Esc` to reject.
+8. **Live Records Explorer & Formatted Exports (`/records` & `/reports`)**:
+   - HTMX-powered live search and category filtering chips.
+   - Styled Excel (`.xlsx`) generated using OpenPyXL with dark header styling and auto-fitted columns.
+   - CSV, JSON, and text executive summary exports.
+
+---
+
+## System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Browser (Tailwind + Alpine.js + HTMX)"]
-        UI["Upload / Search / Gallery / DNA"]
-        Canvas["Offscreen Canvas Resizer (Max 1600px, JPEG 0.85)"]
-        UI --> Canvas
+    subgraph Client["Client Tier (FastAPI + Jinja2 Templates)"]
+        UI["Tailwind CSS + Alpine.js + HTMX + Chart.js (No Node build required)"]
     end
 
-    Canvas -->|Payload < 800 KB| Router{"Vercel / Local Host"}
-
-    subgraph Serverless ["FastAPI Serverless Application (index.py)"]
-        App["FastAPI Entrypoint (app.main)"]
-        StorageFactory["Storage Factory (LocalStorage vs SupabaseStorage)"]
-        DetectorFactory["Detector Factory (LocalDetector vs CloudDetector)"]
-        EmbedderFactory["Embedder Factory (LocalEmbedder vs CloudEmbedder)"]
-        DBPool["SQLAlchemy 2.0 (NullPool Serverless-Safe)"]
+    subgraph Server["Application Server (FastAPI + Uvicorn)"]
+        RouterPages["HTML Page Router (app/routers/pages.py)"]
+        RouterAPI["REST API Router (app/routers/api.py)"]
+        
+        subgraph Services["Service Layer"]
+            DocService["DocumentService (Lifecycle & Promotion)"]
+            ImgService["ImageProcessingService (Playground Previews)"]
+            StatsService["StatsService (Metrics & Aggregations)"]
+            ReportService["ReportService (OpenPyXL Excel & CSV)"]
+        end
+        
+        RouterPages --> DocService
+        RouterPages --> StatsService
+        RouterAPI --> DocService
+        RouterAPI --> ImgService
+        RouterAPI --> StatsService
+        RouterAPI --> ReportService
     end
 
-    Router --> App
-    App --> StorageFactory
-    App --> DetectorFactory
-    App --> EmbedderFactory
-    App --> DBPool
-
-    subgraph CloudStack ["Cloud Mode (AI_MODE=cloud)"]
-        Gemini["Google Gemini 2.5 Flash (Vision + JSON Schema)"]
-        GeminiEmbed["Gemini text-embedding-004 (768-dim Embeddings)"]
-        SupaStore[("Supabase Storage REST API")]
-        SupaDB[("Supabase / Neon PostgreSQL (psycopg)")]
+    subgraph Core["Core Processing Pipeline"]
+        Preprocess["OpenCV Preprocessor (CLAHE, Denoise, Blur Check, Deskew)"]
+        Hasher["SHA-256 Duplicate Detector"]
+        OCREngines["Extractor Factory (EasyOCR / Tesseract / Gemini)"]
+        PandasCleaner["Pandas Data Cleaner (Dates, Phones, Amounts)"]
+        Validators["Pydantic Schema Validation & Confidence Adjustment"]
+        
+        Hasher --> Preprocess --> OCREngines --> PandasCleaner --> Validators
     end
 
-    subgraph LocalStack ["Local Mode (AI_MODE=local)"]
-        YOLO["YOLOv8n (80 COCO Classes, CPU)"]
-        CLIP["OpenCLIP ViT-B-32 (512-dim Latent Vectors)"]
-        LocalDisk[("Local Filesystem (uploads/ / data/)")]
-        LocalDB[("MySQL 8.0+ / SQLite Fallback")]
+    subgraph Data["Database Persistence Layer"]
+        ResilientEngine["Resilient Connection Router"]
+        MySQL[("MySQL 8.0+ Primary\nphoto_automation")]
+        SQLiteFallback[("SQLite 3 Fallback\ndata/snapbase.db")]
+        
+        ResilientEngine -->|Active Ping OK| MySQL
+        ResilientEngine -->|Connection Fails| SQLiteFallback
     end
 
-    DetectorFactory -->|Cloud| Gemini
-    DetectorFactory -->|Local| YOLO
-    EmbedderFactory -->|Cloud| GeminiEmbed
-    EmbedderFactory -->|Local| CLIP
-    StorageFactory -->|Cloud| SupaStore
-    StorageFactory -->|Local| LocalDisk
-    DBPool -->|Cloud| SupaDB
-    DBPool -->|Local| LocalDB
+    DocService --> Core
+    DocService --> ResilientEngine
+    StatsService --> ResilientEngine
+    ReportService --> ResilientEngine
 ```
 
 ---
 
-## Deploying on Vercel (Step-by-Step)
+## Database Schema (Normalized)
 
-Deploying PixelMind to Vercel takes approximately 5 minutes.
+Defined in `database/schema.sql` and implemented via SQLAlchemy 2.0 ORM:
 
-### Step 1: Provision Supabase (Database & Storage)
+```mermaid
+erDiagram
+    USERS ||--o{ DOCUMENTS : "uploads"
+    DOCUMENTS ||--o| RECEIPTS : "promotes upon approval"
+    DOCUMENTS ||--o| STUDENTS : "promotes upon approval"
+    DOCUMENTS ||--o| BUSINESS_CARDS : "promotes upon approval"
+    DOCUMENTS ||--o{ PROCESSING_HISTORY : "audit log"
+    RECEIPTS ||--o{ RECEIPT_ITEMS : "has line items"
+    STUDENTS ||--o{ MARKS : "has course marks"
+```
 
-1. Navigate to [Supabase](https://supabase.com/) and create a new project.
-2. Under **Project Settings &rarr; Database &rarr; Connection String &rarr; URI**:
-   - Copy the PostgreSQL URI.
-   - Replace the driver prefix with `postgresql+psycopg://` (e.g. `postgresql+psycopg://postgres.YOUR_PROJECT_ID:YOUR_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres`).
-3. Under **Storage**:
-   - Click **New Bucket**.
-   - Name it `photos` (or any custom name).
-   - Toggle **Public bucket** ON so uploaded and annotated images can be viewed publicly.
-4. Under **Project Settings &rarr; API**:
-   - Copy your **Project URL** (`https://xyzcompany.supabase.co`).
-   - Copy your **service_role secret key** (needed for authorized serverless image uploads).
+1. **`users`**: Authentication credentials and user roles.
+2. **`documents`**: Ingested image path, unique SHA-256 hash, category, raw OCR text, average confidence, status (`uploaded`, `processed`, `verified`, `rejected`, `failed`), and staging JSON payload.
+3. **`receipts` & `receipt_items`**: Confirmed vendor transactions, tax, subtotal, total amount, and line items.
+4. **`students` & `marks`**: Confirmed student identity, USN, college, semester, percentage, result, and individual course marks.
+5. **`business_cards`**: Confirmed professional contact cards.
+6. **`processing_history`**: Audit trail logging every execution step, millisecond duration, and status transition.
 
-### Step 2: Get a Free Google Gemini API Key
+---
 
-1. Go to [Google AI Studio](https://aistudio.google.com/).
-2. Click **Create API Key**.
-3. Copy the generated key (`AIza...`).
+## Application Pages Walkthrough
 
-### Step 3: Deploy to Vercel
+1. **Home Dashboard (`/`)**: Operational KPI cards (documents, approved, pending, accuracy), line chart of ingestion trends, donut chart of document distribution, and recent activity logs.
+2. **Upload Documents (`/upload`)**: Drag-and-drop batch upload supporting multiple files, webcam snapshot capture, category selector, and SHA-256 duplicate detection.
+3. **Image Processing Playground (`/image-processing`)**: Side-by-side original vs. filtered image view, enhancement sliders (CLAHE, thresholding, blur, sharpen, deskew), and on-demand OCR re-testing.
+4. **Extracted Information Review (`/review`)**: Human-in-the-loop split screen with pannable/zoomable canvas on the left, editable form fields with confidence meters on the right, and approve/reject actions.
+5. **Database Records (`/records`)**: HTMX live search, category filter chips (`receipts`, `students`, `business_cards`), sortable columns, and detailed record views.
+6. **Analytics (`/analytics`)**: Deep data analytics powered by Chart.js (monthly trends, category split, top merchants by spend, student score distribution).
+7. **Export Reports (`/reports`)**: Date and category filtered report generator exporting to OpenPyXL-formatted Excel spreadsheets, CSV, and summary reports.
+8. **Settings (`/settings`)**: Live database health indicator (`MySQL` or `SQLite Fallback`), OCR engine selection radio group, and confidence threshold configurations.
 
-1. Push this repository to GitHub or GitLab.
-2. In the [Vercel Dashboard](https://vercel.com/new), click **Import Project** and select this repository.
-3. Keep default settings:
-   - **Framework Preset**: `Other`
-   - **Root Directory**: `./`
-4. Expand **Environment Variables** and configure the following:
+---
 
-| Variable Name | Required | Example / Description |
-|:---|:---:|:---|
-| `AI_MODE` | **Yes** | `cloud` (forces zero-torch Google Gemini inference) |
-| `DB_URL` | **Yes** | `postgresql+psycopg://postgres:pass@host:5432/postgres` |
-| `GEMINI_API_KEY` | **Yes** | `AIzaSy...` (Google Gemini API key) |
-| `GEMINI_MODEL` | No | `gemini-2.5-flash` (default) |
-| `GEMINI_EMBED_MODEL` | No | `text-embedding-004` (default) |
-| `STORAGE_BACKEND` | **Yes** | `supabase` |
-| `SUPABASE_URL` | **Yes** | `https://your-id.supabase.co` |
-| `SUPABASE_SERVICE_KEY` | **Yes** | Your Supabase service role secret key |
-| `SUPABASE_BUCKET` | **Yes** | `photos` |
+## Installation & Setup
 
-5. Click **Deploy**. Vercel will install the lightweight dependencies from `requirements.txt` (~167 MB uncompressed) and deploy the ASGI FastAPI application via `index.py`.
+### Prerequisites
+- Python 3.10+
+- (Optional) MySQL Server 8.0+ (If MySQL is not installed or unreachable, SnapBase automatically defaults to local SQLite).
+- (Optional) Tesseract OCR (If uninstalled, SnapBase automatically defaults to EasyOCR).
 
-### Step 4: Verify Deployment Health
-
-Open your deployed URL in your browser or run:
+### 1. Clone the Repository
 ```bash
-curl https://your-pixelmind-app.vercel.app/health
+git clone https://github.com/joelmalin13/Photo-to-database-automation-system.git
+cd Photo-to-database-automation-system
 ```
 
-Expected JSON response:
-```json
-{
-  "status": "healthy",
-  "mode": "cloud",
-  "is_vercel": true,
-  "database": {
-    "engine_name": "PostgreSQL",
-    "connected": true,
-    "message": "Connected to remote database."
-  },
-  "storage": {
-    "backend": "supabase",
-    "status": "ready"
-  },
-  "ai": {
-    "detector": "gemini-2.5-flash",
-    "embedder": "text-embedding-004",
-    "gemini_configured": true,
-    "supabase_configured": true
-  }
-}
-```
-
----
-
-## Vercel Constraints & Architectural Solutions
-
-| Vercel Hard Constraint | Impact | PixelMind Engineering Solution |
-|:---|:---|:---|
-| **500 MB Uncompressed Bundle Limit** | `torch`, `ultralytics`, `open-clip-torch`, `opencv-python`, and `scipy` together exceed 2.5 GB. | Replaced heavy C++/PyTorch libraries in cloud mode with `google-genai` (< 12 MB) and pure Pillow / NumPy algorithms. Production bundle is **167.4 MB**. |
-| **4.5 MB Request / Response Limit** | High-resolution phone photos (8–20 MB) would fail with `413 Payload Too Large`. | Implemented offscreen browser HTML `<canvas>` downscaling (max 1600px longest dimension, JPEG 0.85 re-encoding) in `upload.html`. Typical upload size: 200–800 KB. |
-| **Read-Only & Ephemeral Filesystem** | Local SQLite `.db` and `/uploads` folders are lost upon function termination or read-only. | In cloud mode, all binary files stream directly to **Supabase Storage** and metadata is saved to **Supabase PostgreSQL**. Temporary files strictly use `/tmp`. |
-| **Serverless Execution Lifespan** | BackgroundTasks and daemon threads terminate when the response is returned. | Process each image inside its own HTTP request (`POST /api/images/single`) sequentially with browser-side queueing. |
-| **Database Connection Exhaustion** | Serverless function concurrency can quickly exceed database max connection limits. | Configured SQLAlchemy 2.0 with `NullPool` in serverless mode to open and close connections cleanly per invocation. |
-
----
-
-## Local Development & Offline Mode
-
-To run PixelMind locally on your workstation using local CPU deep learning models:
-
+### 2. Set Up Virtual Environment & Dependencies
 ```bash
-# 1. Clone repository
-git clone https://github.com/your-username/pixelmind.git
-cd pixelmind
-
-# 2. Create virtual environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Windows:
+.venv\Scripts\activate
+# Linux / macOS:
+source .venv/bin/activate
 
-# 3. Install production and local deep-learning dependencies
 pip install -r requirements.txt
-pip install -r requirements-local.txt
-
-# 4. Configure local environment
-cp .env.example .env
-# Edit .env: Set AI_MODE=local, DB_URL=sqlite:///data/pixelmind.db
-
-# 5. Start development server
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Visit `http://127.0.0.1:8000` in your web browser.
+### 3. Configure Database (.env)
+Create or edit `.env` in the project root:
+```env
+# Primary MySQL Configuration
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=photo_automation
 
----
+DATABASE_URL=mysql+mysqlconnector://root:your_password@localhost:3306/photo_automation
 
-## REST API Reference
+# OCR Preferences
+DEFAULT_ENGINE=ocr
+CONFIDENCE_THRESHOLD=0.70
+```
 
-| Method | Endpoint | Description |
-|:---|:---|:---|
-| `GET` | `/health` | Runtime system telemetry, AI mode, DB connection health, and storage backend status (no secrets). |
-| `POST` | `/api/images/single` | Sequential single-image upload with browser canvas compression compatibility. |
-| `POST` | `/api/images` | Multi-image batch ingestion endpoint. |
-| `GET` | `/api/images` | Filter, search, and paginate stored images by label, category, environment, and date. |
-| `GET` | `/api/images/{id}` | Detailed image record with bounding boxes, dominant colors, and Image DNA. |
-| `POST` | `/api/images/{id}/retry` | Re-analyze a failed image with the active AI detector without re-uploading. |
-| `DELETE` | `/api/images/{id}` | Cascade-delete an image and its detections, DNA, and anomaly records. |
-| `POST` | `/api/search` | Natural language image search (e.g. `{"query": "a red car parked by a tree"}`). |
-| `POST` | `/api/ask` | "Ask Your Images" rule-based visual intelligence Q&A. |
-| `POST` | `/api/similar` | Reverse image similarity search across 4 modes (`overall`, `object`, `color`, `scene`). |
-| `GET` | `/api/analytics` | Aggregated visual metrics and KPI data for Chart.js dashboards. |
-
----
-
-## Automated Verification & Test Suite
-
-Verify all 36 test cases and measure serverless bundle compliance:
-
+### 4. Initialize MySQL Database (Optional)
+If using MySQL, execute the DDL schema script:
 ```bash
-# Run complete test suite (includes cloud mode zero-torch module isolation tests)
+mysql -u root -p < database/schema.sql
+```
+*Note: If MySQL is not running, no setup is required! SnapBase will detect this and automatically initialize `data/snapbase.db` using SQLite.*
+
+---
+
+## Running the Application
+
+Start the FastAPI application via Uvicorn:
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+Open your browser at:
+- Web Application: **http://127.0.0.1:8000**
+- Interactive Swagger API Documentation: **http://127.0.0.1:8000/docs**
+- ReDoc API Documentation: **http://127.0.0.1:8000/redoc**
+
+---
+
+## Evaluation Benchmark
+
+Run the synthetic evaluation benchmark on the 15 labelled documents (5 receipts, 5 marksheets, 5 business cards):
+```bash
+python evaluate.py
+```
+This produces the evaluation report in `docs/evaluation.md`, measuring:
+- **Average OCR Confidence**: The optical character recognition model's internal certainty.
+- **Field-Level Extraction Accuracy**: Percentage of business fields matching ground truth after normalization.
+
+---
+
+## Running the Test Suite
+
+SnapBase includes 52 automated tests covering the API, service layer, image processing, CRUD operations, database resilience, and schema validations:
+```bash
 python -m pytest tests/ -v
-
-# Run bundle size verification against Vercel 500 MB ceiling
-python scripts/check_bundle_size.py
-```
-
-### Bundle Size Audit Output:
-```
-============================================================
-PIXELMIND VERCEL BUNDLE SIZE AUDIT
-============================================================
-PASS: No heavy deep-learning packages (torch, ultralytics, cv2) found.
-Package                        | Estimated Size 
---------------------------------------------------
-fastapi                        |     1.59 MB
-uvicorn                        |     0.70 MB
-jinja2                         |     1.12 MB
-python-multipart               |     0.18 MB
-httpx                          |     0.71 MB
-python-dotenv                  |     0.21 MB
-python-dateutil                |     0.71 MB
-sqlalchemy                     |    18.39 MB
-psycopg                        |     1.71 MB
-pymysql                        |     0.32 MB
-mysql-connector-python         |    59.39 MB
-pydantic                       |     3.62 MB
-pydantic-settings              |     0.60 MB
-numpy                          |    51.20 MB
-pillow                         |    15.41 MB
-google-genai                   |    11.54 MB
---------------------------------------------------
-Total Measured Bundle          |   167.40 MB
-
-Audit Result:
-  Measured Size : 167.40 MB
-  Target Budget : 400.0 MB
-  Vercel Ceiling: 500.0 MB
-
-SUCCESS: Bundle size (167.40 MB) is well within Vercel's serverless limits!
 ```
 
 ---
 
-## License
+## Running with Docker
 
-MIT License. Built with FastAPI, Tailwind CSS, Alpine.js, and Google Gemini.
+Build and run using Docker:
+```bash
+docker build -t snapbase .
+docker run -p 8000:8000 snapbase
+```
+
+---
+
+## Design System Specifications
+- **Typography:** Inter (via Google Fonts).
+- **Color Palette:** Pure white background (`#FFFFFF`), near-black text (`#111827`), subtle gray borders (`#E5E7EB`), red primary accent (`#C62828`), dark top bar/sidebar header (`#111111`).
+- **Icons:** Lucide SVG icons (zero emojis).
+- **Responsive:** Mobile-first layout with collapsible navigation sidebar.

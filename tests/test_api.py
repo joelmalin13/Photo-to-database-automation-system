@@ -1,170 +1,262 @@
-"""Comprehensive test suite for PixelMind FastAPI endpoints and web interface.
+"""Comprehensive test suite for SnapBase FastAPI endpoints and service layer.
+
+Validates:
+- Document upload and ingestion
+- Duplicate hash detection
+- Listing, filtering, sorting, pagination
+- Document approval (promoting to verified) and rejection lifecycle
+- Field patching and updates
+- Single document deletion
+- Dataset exports (CSV, XLSX, JSON)
+- Dashboard & analytics statistics
+- Image processing playground preview
+- Error handling and HTTP status codes
+- HTML template pages rendering (all 8 application views)
 """
 
 from __future__ import annotations
 
 import io
+from pathlib import Path
 from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image as PILImage
+from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.dependencies import get_db
 from app.main import app
-from db.crud import create_image
+import db.session as dbs
 from db.models import Base
 
 
 @pytest.fixture(scope="function")
-def test_client() -> Generator[TestClient, None, None]:
-    """Provide TestClient backed by an isolated in-memory SQLite database using StaticPool."""
+def test_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[Session, None, None]:
+    """Provide an isolated SQLite database file for API tests."""
+    db_file = tmp_path / "test_api.db"
+    test_url = f"sqlite:///{db_file.as_posix()}"
+    monkeypatch.setattr("config.settings.DATABASE_URL", test_url)
+
     test_engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        test_url, connect_args={"check_same_thread": False}
     )
     test_factory = sessionmaker(
         bind=test_engine, autoflush=False, autocommit=False
     )
+    monkeypatch.setattr(dbs, "engine", test_engine)
+    monkeypatch.setattr(dbs, "SessionFactory", test_factory)
+
     Base.metadata.create_all(bind=test_engine)
 
-    # Pre-seed one image
-    session = test_factory()
-    create_image(
-        session=session,
-        filename="seed_test.jpg",
-        stored_path="uploads/seed.jpg",
-        annotated_path=None,
-        sha256="seedhash1234567890abcdef",
-        phash="1234567890abcdef",
-        width=600,
-        height=400,
-        category="Vehicles",
-        scene="street",
-        environment="outdoor",
-    )
-    session.commit()
-    session.close()
-
     def override_get_db() -> Generator[Session, None, None]:
-        s = test_factory()
+        session: Session = test_factory()
         try:
-            yield s
-            s.commit()
+            yield session
+            session.commit()
         except Exception:
-            s.rollback()
+            session.rollback()
             raise
         finally:
-            s.close()
+            session.close()
 
     app.dependency_overrides[get_db] = override_get_db
-
-    with TestClient(app) as client:
-        yield client
-
+    yield test_factory()
     app.dependency_overrides.clear()
 
 
-def test_html_pages_render(test_client: TestClient):
-    """Verify all 8 HTML user interfaces render with HTTP 200 OK."""
-    endpoints = [
-        "/",
-        "/upload",
-        "/gallery",
-        "/search",
-        "/ask",
-        "/similar",
-        "/analytics",
-        "/settings",
-    ]
-    for url in endpoints:
-        resp = test_client.get(url)
-        assert resp.status_code == 200, f"Failed for {url}: {resp.status_code}"
-        assert "PixelMind" in resp.text or "PIXELMIND" in resp.text
+@pytest.fixture
+def client(test_db: Session) -> Generator[TestClient, None, None]:
+    """Provide a FastAPI TestClient bound to the isolated test database."""
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_api_status(test_client: TestClient):
-    """Verify /api/status endpoint returns database and model health."""
-    resp = test_client.get("/api/status")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "database" in data
-    assert "models" in data
-    detector_name = data["models"]["object_detector"].lower()
-    assert "yolov8" in detector_name or "gemini" in detector_name
-
-
-def test_api_analytics(test_client: TestClient):
-    """Verify /api/analytics returns chart-ready aggregations."""
-    resp = test_client.get("/api/analytics")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "total_images" in data
-    assert "category_dist" in data
-    assert "scene_dist" in data
-
-
-def test_api_list_images(test_client: TestClient):
-    """Verify /api/images returns paginated JSON list."""
-    resp = test_client.get("/api/images")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["total"] >= 1
-    assert len(data["items"]) >= 1
-    assert data["items"][0]["filename"] == "seed_test.jpg"
-
-
-def test_api_search_endpoint(test_client: TestClient):
-    """Verify /api/search accepts natural language query and returns ranked results."""
-    resp = test_client.post("/api/search", json={"query": "a car parked on the street"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "results" in data
-    assert "total_results" in data
-
-
-def test_api_ask_endpoint(test_client: TestClient):
-    """Verify /api/ask accepts question and returns rule-based answers."""
-    resp = test_client.post("/api/ask", json={"question": "Find images containing dogs"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["understood"] is True
-    assert "answer" in data
-
-
-def test_api_upload_and_delete(test_client: TestClient):
-    """Verify end-to-end image upload and subsequent deletion."""
-    # Create unique in-memory 100x100 RGB image
-    img = PILImage.new("RGB", (100, 100), color=(123, 210, 85))
+def _make_dummy_image(text_color: tuple[int, int, int] = (10, 10, 10)) -> bytes:
+    """Generate a clean in-memory JPEG image for upload testing."""
+    img = Image.new("RGB", (250, 150), color=(240, 240, 240))
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
-    image_bytes = buf.getvalue()
+    return buf.getvalue()
 
-    upload_resp = test_client.post(
-        "/api/images",
-        files=[("files", ("unit_test_upload.jpg", image_bytes, "image/jpeg"))],
-        data={"confidence_threshold": "0.25"},
-    )
-    assert upload_resp.status_code == 201
-    upload_data = upload_resp.json()
-    assert upload_data["success"] is True
-    assert upload_data["processed_count"] == 1
-    created_id = upload_data["images"][0]["id"]
 
-    # Verify detail retrieval
-    detail_resp = test_client.get(f"/api/images/{created_id}")
-    assert detail_resp.status_code == 200
-    detail_data = detail_resp.json()
-    assert detail_data["id"] == created_id
-    assert "dna" in detail_data
+def test_stats_initial_state(client: TestClient) -> None:
+    """Test GET /api/stats with empty database."""
+    res = client.get("/api/stats")
+    assert res.status_code == 200
+    data = res.json()
+    assert "total_documents" in data
+    assert data["total_documents"] == 0
+    assert data["has_data"] is False
+    assert "status_counts" in data
+    assert "timeseries" in data
 
-    # Verify deletion
-    del_resp = test_client.delete(f"/api/images/{created_id}")
-    assert del_resp.status_code == 204
 
-    # Verify 404 after deletion
-    after_del = test_client.get(f"/api/images/{created_id}")
+def test_upload_and_duplicate_detection(client: TestClient) -> None:
+    """Test document upload and verify duplicate hash detection."""
+    img_bytes = _make_dummy_image()
+
+    # 1. First Upload
+    files = {"files": ("test_receipt.jpg", img_bytes, "image/jpeg")}
+    res = client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
+    assert res.status_code == 201
+    data = res.json()
+    assert data["processed_count"] == 1
+    doc = data["documents"][0]
+    assert doc["is_duplicate"] is False
+    assert doc["status"] in ("processed", "uploaded")
+    assert doc["document_id"] is not None
+    doc_id = doc["document_id"]
+
+    # 2. Duplicate Upload (exact same bytes)
+    files_dup = {"files": ("test_receipt_copy.jpg", img_bytes, "image/jpeg")}
+    res_dup = client.post("/api/documents", files=files_dup, data={"doc_type": "receipts", "preferred_engine": "ocr"})
+    assert res_dup.status_code == 201
+    data_dup = res_dup.json()
+    doc_dup = data_dup["documents"][0]
+    assert doc_dup["is_duplicate"] is True
+    assert doc_dup["document_id"] == doc_id
+
+
+def test_list_and_search_documents(client: TestClient) -> None:
+    """Test listing, search, and pagination."""
+    # Seed an image
+    img_bytes = _make_dummy_image()
+    files = {"files": ("grocery_receipt.jpg", img_bytes, "image/jpeg")}
+    client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
+
+    # List all
+    res = client.get("/api/documents")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] >= 1
+    assert len(data["items"]) >= 1
+
+    # Filter by category
+    res_type = client.get("/api/documents?category=receipts")
+    assert res_type.status_code == 200
+    assert res_type.json()["total"] >= 1
+
+    # Filter by non-matching category
+    res_empty = client.get("/api/documents?category=non_existent_type")
+    assert res_empty.status_code == 200
+    assert res_empty.json()["total"] == 0
+
+
+def test_get_patch_approve_reject_delete_flow(client: TestClient) -> None:
+    """Test full document lifecycle: get, update fields, approve, reject, delete."""
+    img_bytes = _make_dummy_image((50, 50, 50))
+    files = {"files": ("lifecycle_test.jpg", img_bytes, "image/jpeg")}
+    upload_res = client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
+    doc_id = upload_res.json()["documents"][0]["document_id"]
+    assert doc_id is not None
+
+    # 1. GET by ID
+    get_res = client.get(f"/api/documents/{doc_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["id"] == doc_id
+
+    # 2. PATCH fields
+    patch_payload = {"fields": {"shop_name": "Acme Supermarket", "total_amount": 42.50}}
+    patch_res = client.patch(f"/api/documents/{doc_id}", json=patch_payload)
+    assert patch_res.status_code == 200
+    updated_fields = patch_res.json()["fields"]
+    assert updated_fields["shop_name"] == "Acme Supermarket"
+
+    # 3. Approve Document (promotes to verified confirmed state)
+    approve_res = client.post(f"/api/documents/{doc_id}/approve")
+    assert approve_res.status_code == 200
+    assert approve_res.json()["status"] == "verified"
+
+    # 4. Reject Document
+    reject_res = client.post(f"/api/documents/{doc_id}/reject")
+    assert reject_res.status_code == 200
+    assert reject_res.json()["status"] == "rejected"
+
+    # 5. Delete Document
+    del_res = client.delete(f"/api/documents/{doc_id}")
+    assert del_res.status_code == 204
+
+    # 6. Verify 404 after deletion
+    after_del = client.get(f"/api/documents/{doc_id}")
     assert after_del.status_code == 404
+
+
+def test_exports_csv_xlsx_json(client: TestClient) -> None:
+    """Verify export endpoints generate valid CSV, XLSX, and JSON downloads."""
+    img_bytes = _make_dummy_image((80, 80, 80))
+    files = {"files": ("export_test.jpg", img_bytes, "image/jpeg")}
+    client.post("/api/documents", files=files, data={"doc_type": "receipts", "preferred_engine": "ocr"})
+
+    # Export CSV
+    csv_res = client.get("/api/export?format=csv")
+    assert csv_res.status_code == 200
+    assert "text/csv" in csv_res.headers["content-type"]
+    assert len(csv_res.content) > 0
+
+    # Export Excel
+    xlsx_res = client.get("/api/export?format=xlsx")
+    assert xlsx_res.status_code == 200
+    assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in xlsx_res.headers["content-type"]
+    assert len(xlsx_res.content) > 0
+
+    # Export JSON
+    json_res = client.get("/api/export?format=json")
+    assert json_res.status_code == 200
+    assert "application/json" in json_res.headers["content-type"]
+    assert isinstance(json_res.json(), list)
+
+
+def test_image_processing_preview_api(client: TestClient) -> None:
+    """Test image enhancement preview endpoint."""
+    img_bytes = _make_dummy_image((30, 40, 50))
+    files = {"file": ("filter_test.jpg", img_bytes, "image/jpeg")}
+    data = {
+        "grayscale": "true",
+        "denoise": "true",
+        "contrast_clahe": "true",
+        "sharpen": "true",
+        "run_ocr": "false",
+    }
+    res = client.post("/api/image-processing/preview", files=files, data=data)
+    assert res.status_code == 200
+    resp_data = res.json()
+    assert "original_image_base64" in resp_data
+    assert "processed_image_base64" in resp_data
+    assert "metadata" in resp_data
+    assert "width" in resp_data["metadata"]
+
+
+def test_api_error_handling(client: TestClient) -> None:
+    """Test 400 and 404 response codes for invalid inputs."""
+    # 404 for non-existent document
+    res_404 = client.get("/api/documents/999999")
+    assert res_404.status_code == 404
+
+    # 400 for empty file upload
+    empty_files = {"files": ("empty.jpg", b"", "image/jpeg")}
+    res_empty = client.post("/api/documents", files=empty_files)
+    assert res_empty.status_code == 400
+
+    # 400 for unsupported file extension
+    txt_files = {"files": ("test.txt", b"plain text content", "text/plain")}
+    res_txt = client.post("/api/documents", files=txt_files)
+    assert res_txt.status_code == 400
+
+
+def test_html_pages_render(client: TestClient) -> None:
+    """Test that all 8 primary HTML UI routes return 200 OK without errors."""
+    routes = [
+        "/",
+        "/upload",
+        "/image-processing",
+        "/review",
+        "/records",
+        "/analytics",
+        "/reports",
+        "/settings",
+    ]
+    for path in routes:
+        res = client.get(path)
+        assert res.status_code == 200, f"Page {path} returned status {res.status_code}"
+        assert "<!DOCTYPE html>" in res.text

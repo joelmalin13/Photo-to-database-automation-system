@@ -133,6 +133,8 @@ class OCRExtractor(BaseExtractor):
             val, conf = self._find_first_pattern_match(
                 patterns, raw_text, lines, base_confidence
             )
+            if val and key == "shop_name" and "\n" in val:
+                val = val.split("\n")[0].strip()
             fields[key] = val
             confidences[key] = conf
 

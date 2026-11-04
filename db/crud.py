@@ -1,408 +1,418 @@
-"""Parameterized database CRUD operations and lifecycle management for PixelMind.
+"""Parameterized database CRUD operations and lifecycle management.
 
-All queries are parameterized to prevent SQL injection and maintain strict relational integrity.
+Enforces strict domain rules:
+- Duplicate prevention via unique image SHA-256 hash.
+- Audit logging of all actions into processing_history.
+- Confirmed records promotion ONLY upon human/verified approval.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+import math
 from typing import Any, Dict, List, Optional, Tuple
-import numpy as np
 from sqlalchemy import desc, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
+from config.settings import DocumentCategory, DocumentStatus, logger
 from db.models import (
-    Anomaly,
-    Detection,
-    Image,
-    ImageDNA,
-    ProcessingLog,
+    BusinessCard,
+    Document,
+    Mark,
+    ProcessingHistory,
+    Receipt,
+    ReceiptItem,
+    Student,
 )
 
 
-def log_step(
+def log_processing_step(
     session: Session,
-    image_id: Optional[int],
-    step: str,
+    document_id: int,
+    step_name: str,
     status: str = "success",
-    message: Optional[str] = None,
+    details: Optional[str] = None,
     execution_time_ms: int = 0,
-) -> ProcessingLog:
-    """Record an audit log entry in processing_log."""
-    log_entry = ProcessingLog(
-        image_id=image_id,
-        step=step,
+) -> ProcessingHistory:
+    """Log an execution step or error event to processing_history."""
+    history = ProcessingHistory(
+        document_id=document_id,
+        step_name=step_name,
         status=status,
-        message=message,
+        details=details,
         execution_time_ms=execution_time_ms,
     )
-    session.add(log_entry)
-    return log_entry
+    session.add(history)
+    return history
 
 
-def create_image(
+def create_document(
     session: Session,
     filename: str,
-    stored_path: str,
-    annotated_path: Optional[str],
-    sha256: str,
-    phash: Optional[str],
-    width: int,
-    height: int,
-    category: str = "Uncategorized",
-    scene: Optional[str] = None,
-    environment: Optional[str] = None,
-    status: str = "done",
-    caption: Optional[str] = None,
-) -> Image:
-    """Insert a new image record into the database."""
-    img = Image(
+    image_path: str,
+    image_hash: str,
+    category: str = DocumentCategory.RECEIPTS.value,
+    ocr_text: Optional[str] = None,
+    ocr_confidence: float = 0.0,
+    status: str = DocumentStatus.PROCESSED.value,
+    raw_fields: Optional[Dict[str, Any]] = None,
+    user_id: Optional[int] = None,
+    execution_time_ms: int = 0,
+) -> Document:
+    """Create a new document entity and record initial processing history."""
+    doc = Document(
+        user_id=user_id,
         filename=filename,
-        stored_path=stored_path,
-        annotated_path=annotated_path,
-        sha256=sha256,
-        phash=phash,
-        width=width,
-        height=height,
+        image_path=image_path,
+        image_hash=image_hash,
         category=category,
-        scene=scene,
-        environment=environment,
+        ocr_text=ocr_text,
+        ocr_confidence=float(ocr_confidence),
         status=status,
-        caption=caption,
+        raw_fields_json=raw_fields or {},
     )
-    session.add(img)
+    session.add(doc)
     session.flush()
-    return img
+
+    log_processing_step(
+        session=session,
+        document_id=doc.id,
+        step_name="ingestion_and_extraction",
+        status="success" if status != DocumentStatus.FAILED.value else "failed",
+        details=f"Extracted category: {category}, confidence: {ocr_confidence:.2f}",
+        execution_time_ms=execution_time_ms,
+    )
+    return doc
 
 
-def find_image_by_hash(session: Session, sha256_hash: str) -> Optional[Image]:
-    """Look up an existing image by SHA-256 hash for duplicate detection."""
-    stmt = select(Image).where(Image.sha256 == sha256_hash)
+def get_document_by_id(session: Session, doc_id: int) -> Optional[Document]:
+    """Retrieve single document with confirmed child relations pre-loaded."""
+    stmt = (
+        select(Document)
+        .options(
+            joinedload(Document.receipt).joinedload(Receipt.items),
+            joinedload(Document.student).joinedload(Student.marks),
+            joinedload(Document.business_card),
+            joinedload(Document.history),
+        )
+        .where(Document.id == doc_id)
+    )
     return session.scalar(stmt)
 
 
-def add_detections(
-    session: Session,
-    image_id: int,
-    detections_list: List[Dict[str, Any]],
-) -> List[Detection]:
-    """Insert YOLO detections for an image."""
-    records: List[Detection] = []
-    for item in detections_list:
-        rec = Detection(
-            image_id=image_id,
-            label=item["label"],
-            category=item["category"],
-            count=item.get("count", 1),
-            avg_confidence=float(item.get("avg_confidence", 0.0)),
-            bbox_json=item.get("bboxes", []),
-        )
-        session.add(rec)
-        records.append(rec)
+def find_document_by_hash(session: Session, image_hash: str) -> Optional[Document]:
+    """Look up an existing document by unique SHA-256 hash."""
+    stmt = select(Document).where(Document.image_hash == image_hash)
+    return session.scalar(stmt)
+
+
+def update_document_status(
+    session: Session, doc_id: int, new_status: str, note: Optional[str] = None
+) -> Optional[Document]:
+    """Update document lifecycle status with history log."""
+    doc = get_document_by_id(session, doc_id)
+    if not doc:
+        return None
+    old_status = doc.status
+    doc.status = new_status
     session.flush()
-    return records
 
-
-def set_image_dna(
-    session: Session,
-    image_id: int,
-    dominant_colors: List[Dict[str, Any]],
-    embedding_vector: Optional[Any],
-    composition: Dict[str, Any],
-) -> ImageDNA:
-    """Store or update the visual fingerprint and DNA of an image with JSON embedding."""
-    dna = session.get(ImageDNA, image_id)
-    if not dna:
-        dna = ImageDNA(image_id=image_id)
-        session.add(dna)
-
-    dna.dominant_colors_json = dominant_colors
-    dna.composition_json = composition
-
-    # Normalize embedding to JSON list of floats
-    if embedding_vector is not None:
-        if isinstance(embedding_vector, list):
-            dna.embedding_json = [float(x) for x in embedding_vector]
-        elif isinstance(embedding_vector, np.ndarray):
-            dna.embedding_json = embedding_vector.astype(float).tolist()
-        elif isinstance(embedding_vector, bytes):
-            dna.embedding_blob = embedding_vector
-            try:
-                arr = np.frombuffer(embedding_vector, dtype=np.float32)
-                dna.embedding_json = arr.astype(float).tolist()
-            except Exception:
-                pass
+    hist = log_processing_step(
+        session=session,
+        document_id=doc.id,
+        step_name="status_transition",
+        status=new_status,
+        details=f"Status transitioned from {old_status} to {new_status}. {note or ''}".strip(),
+    )
+    doc.history.append(hist)
     session.flush()
-    return dna
+    return doc
 
 
-def flag_anomaly(
-    session: Session,
-    image_id: int,
-    reason: str,
-    score: float,
-) -> Anomaly:
-    """Record statistical anomaly flag for an image."""
-    anom = session.get(Anomaly, image_id)
-    if not anom:
-        anom = Anomaly(image_id=image_id)
-        session.add(anom)
-    anom.reason = reason
-    anom.score = score
+def update_document_raw_fields(
+    session: Session, doc_id: int, updated_fields: Dict[str, Any]
+) -> Optional[Document]:
+    """Update raw extracted fields stored in the document JSON column."""
+    doc = get_document_by_id(session, doc_id)
+    if not doc:
+        return None
+    current = doc.raw_fields_json or {}
+    current["fields"] = updated_fields
+    doc.raw_fields_json = dict(current)
     session.flush()
-    return anom
+
+    log_processing_step(
+        session=session,
+        document_id=doc.id,
+        step_name="field_edit",
+        status="success",
+        details="Extracted fields edited via review interface.",
+    )
+    return doc
 
 
-def get_image_by_id(session: Session, image_id: int) -> Optional[Image]:
-    """Retrieve image entity by primary key."""
-    return session.get(Image, image_id)
-
-
-def delete_image(session: Session, image_id: int) -> bool:
-    """Delete image and all cascading child records."""
-    img = session.get(Image, image_id)
-    if not img:
+def delete_document(session: Session, doc_id: int) -> bool:
+    """Delete document entity and all cascading children."""
+    doc = session.get(Document, doc_id)
+    if not doc:
         return False
-    session.delete(img)
+    session.delete(doc)
     session.flush()
     return True
 
 
-def list_images(
+def list_documents(
     session: Session,
     category: Optional[str] = None,
-    label: Optional[str] = None,
-    environment: Optional[str] = None,
-    search: Optional[str] = None,
+    status: Optional[str] = None,
+    search_query: Optional[str] = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
     page: int = 1,
-    page_size: int = 12,
-) -> Tuple[List[Image], int]:
-    """Search, filter, sort, and paginate image records."""
-    stmt = select(Image)
+    page_size: int = 10,
+) -> Tuple[List[Document], int]:
+    """Parameterized search, filtering, and pagination for document records."""
+    stmt = select(Document).options(
+        joinedload(Document.receipt),
+        joinedload(Document.student),
+        joinedload(Document.business_card),
+    )
 
-    if category and category.lower() != "all":
-        stmt = stmt.where(Image.category.ilike(category))
+    # Normalize category filters
+    if category and category != "all":
+        if category in ("receipt_invoice", "receipts"):
+            stmt = stmt.where(Document.category.in_(["receipts", "receipt_invoice"]))
+        elif category in ("student_marksheet", "students", "student_id_form"):
+            stmt = stmt.where(Document.category.in_(["students", "student_marksheet", "student_id_form"]))
+        elif category in ("business_card", "business_cards"):
+            stmt = stmt.where(Document.category.in_(["business_cards", "business_card"]))
+        else:
+            stmt = stmt.where(Document.category == category)
 
-    if environment and environment.lower() != "all":
-        stmt = stmt.where(Image.environment.ilike(environment))
+    if status and status != "all":
+        stmt = stmt.where(Document.status == status)
 
-    if label and label.lower() != "all":
-        stmt = stmt.join(Image.detections).where(Detection.label.ilike(f"%{label}%"))
-
-    if search:
-        search_pattern = f"%{search.strip()}%"
+    if search_query:
+        pattern = f"%{search_query.strip()}%"
         stmt = stmt.where(
             or_(
-                Image.filename.ilike(search_pattern),
-                Image.category.ilike(search_pattern),
-                Image.scene.ilike(search_pattern),
-                Image.detections.any(Detection.label.ilike(search_pattern)),
+                Document.filename.ilike(pattern),
+                Document.ocr_text.ilike(pattern),
+                Document.category.ilike(pattern),
             )
         )
 
-    # Count total matching
-    count_stmt = select(func.count()).select_from(stmt.distinct().subquery())
+    # Count total
+    count_stmt = select(func.count()).select_from(stmt.subquery())
     total = session.scalar(count_stmt) or 0
 
-    # Sorting
-    sort_column = getattr(Image, sort_by, Image.created_at)
-    if sort_order.lower() == "desc":
-        stmt = stmt.order_by(desc(sort_column))
-    else:
-        stmt = stmt.order_by(sort_column)
+    # Sort
+    sort_col = getattr(Document, sort_by, Document.created_at)
+    stmt = stmt.order_by(desc(sort_col) if sort_order.lower() == "desc" else sort_col)
 
-    # Pagination
-    offset = max(0, (page - 1) * page_size)
-    stmt = stmt.distinct().offset(offset).limit(page_size)
+    # Paginate
+    offset = (page - 1) * page_size
+    stmt = stmt.offset(offset).limit(page_size)
 
-    items = list(session.scalars(stmt).all())
-    return items, total
+    results = list(session.scalars(stmt).unique())
+    return results, total
 
 
-def get_all_embeddings(session: Session) -> List[Tuple[int, np.ndarray]]:
-    """Retrieve all stored embeddings as numpy float32 arrays, supporting both JSON and legacy blobs."""
-    stmt = select(ImageDNA.image_id, ImageDNA.embedding_json, ImageDNA.embedding_blob).where(
-        or_(ImageDNA.embedding_json.isnot(None), ImageDNA.embedding_blob.isnot(None))
-    )
-    rows = session.execute(stmt).all()
-    results: List[Tuple[int, np.ndarray]] = []
-    for img_id, emb_json, blob in rows:
-        if emb_json:
-            try:
-                arr = np.array(emb_json, dtype=np.float32)
-                results.append((img_id, arr))
-                continue
-            except Exception:
-                pass
-        if blob:
-            try:
-                arr = np.frombuffer(blob, dtype=np.float32)
-                results.append((img_id, arr))
-            except Exception:
-                continue
-    return results
-
-
-def get_all_dna_for_similarity(
+def promote_to_confirmed_record(
     session: Session,
-) -> List[Tuple[Image, Optional[ImageDNA], List[Detection]]]:
-    """Retrieve all images with DNA and detections for reverse similarity search."""
-    stmt = select(Image)
-    images = list(session.scalars(stmt).all())
-    results: List[Tuple[Image, Optional[ImageDNA], List[Detection]]] = []
-    for img in images:
-        results.append((img, img.dna, img.detections or []))
-    return results
+    doc_id: int,
+    verified_fields: Dict[str, Any],
+    items: Optional[List[Dict[str, Any]]] = None,
+) -> Document:
+    """Promote verified extracted data into the official normalized business tables.
 
+    Rule: Never save unverified OCR output as confirmed data. Only approved records
+    populate receipts, students, or business_cards tables.
+    """
+    doc = get_document_by_id(session, doc_id)
+    if not doc:
+        raise ValueError(f"Document #{doc_id} not found.")
 
-# -------------------------------------------------------------
-# Parameterized Query Engine for "Ask Your Images"
-# -------------------------------------------------------------
+    category = doc.category.lower()
 
-def count_label_across_all(session: Session, label: str) -> int:
-    """Return total count of a specific object detected across all images."""
-    stmt = select(func.sum(Detection.count)).where(Detection.label.ilike(label))
-    result = session.scalar(stmt)
-    return int(result or 0)
+    # 1. Receipts / Invoices Promotion
+    if category in ("receipts", "receipt_invoice"):
+        raw_date = verified_fields.get("date")
+        parsed_date = None
+        if raw_date:
+            try:
+                parsed_date = datetime.strptime(str(raw_date)[:10], "%Y-%m-%d").date()
+            except Exception:
+                parsed_date = None
 
+        receipt = doc.receipt
+        if not receipt:
+            receipt = Receipt(document_id=doc.id)
+            doc.receipt = receipt
+            session.add(receipt)
 
-def find_images_with_label(session: Session, label: str) -> List[Image]:
-    """Find images containing a specific detected label."""
-    stmt = select(Image).join(Image.detections).where(Detection.label.ilike(label)).distinct()
-    return list(session.scalars(stmt).all())
+        receipt.shop_name = str(verified_fields.get("shop_name") or verified_fields.get("vendor_name") or "Unknown Merchant")
+        receipt.receipt_number = str(verified_fields.get("receipt_number") or verified_fields.get("invoice_number") or "")
+        receipt.date = parsed_date
+        receipt.phone = str(verified_fields.get("phone") or "")
+        receipt.email = str(verified_fields.get("email") or "")
+        receipt.pincode = str(verified_fields.get("pincode") or "")
+        receipt.category = str(verified_fields.get("category") or doc.category or "Grocery")
+        receipt.subtotal = float(verified_fields.get("subtotal") or 0.0)
+        receipt.tax_amount = float(verified_fields.get("tax_amount") or 0.0)
+        receipt.total_amount = float(verified_fields.get("total_amount") or 0.0)
+        receipt.ocr_confidence = float(doc.ocr_confidence)
+        receipt.image_path = str(doc.image_path)
+        receipt.raw_text = str(doc.ocr_text or "")
+        receipt.is_verified = 1
+        receipt.image_hash = str(doc.image_hash)
 
+        # Update items
+        if items is not None:
+            receipt.items.clear()
+            for it in items:
+                item_name = str(it.get("item_name") or it.get("description") or "Item")
+                qty = float(it.get("quantity") or 1.0)
+                unit_p = float(it.get("unit_price") or 0.0)
+                tot_p = float(it.get("total_price") or it.get("amount") or (qty * unit_p))
+                receipt.items.append(
+                    ReceiptItem(
+                        item_name=item_name,
+                        quantity=qty,
+                        unit_price=unit_p,
+                        total_price=tot_p,
+                    )
+                )
 
-def find_images_with_both_labels(session: Session, label_a: str, label_b: str) -> List[Image]:
-    """Find images containing both specified object labels."""
-    stmt = (
-        select(Image)
-        .where(
-            Image.detections.any(Detection.label.ilike(label_a)),
-            Image.detections.any(Detection.label.ilike(label_b)),
-        )
-        .distinct()
+    # 2. Students / Marksheet Promotion
+    elif category in ("students", "student_marksheet", "student_id_form"):
+        student = doc.student
+        if not student:
+            student = Student(document_id=doc.id)
+            doc.student = student
+            session.add(student)
+
+        student.name = str(verified_fields.get("name") or verified_fields.get("full_name") or "Student Name")
+        student.usn = str(verified_fields.get("usn") or verified_fields.get("id_number") or "N/A")
+        student.college = str(verified_fields.get("college") or verified_fields.get("institution") or "")
+        student.semester = str(verified_fields.get("semester") or "")
+        student.total_marks = float(verified_fields.get("total_marks") or 0.0)
+        student.percentage = float(verified_fields.get("percentage") or 0.0)
+        student.result = str(verified_fields.get("result") or "PASS")
+
+        # Update marks
+        if items is not None:
+            student.marks.clear()
+            for m in items:
+                subj = str(m.get("subject_name") or m.get("subject") or "Subject")
+                code = str(m.get("subject_code") or m.get("code") or "")
+                obt = float(m.get("marks_obtained") or m.get("marks") or 0.0)
+                max_m = float(m.get("max_marks") or 100.0)
+                student.marks.append(
+                    Mark(
+                        subject_name=subj,
+                        subject_code=code,
+                        marks_obtained=obt,
+                        max_marks=max_m,
+                    )
+                )
+
+    # 3. Business Cards Promotion
+    elif category in ("business_cards", "business_card"):
+        card = doc.business_card
+        if not card:
+            card = BusinessCard(document_id=doc.id)
+            doc.business_card = card
+            session.add(card)
+
+        card.person_name = str(verified_fields.get("person_name") or verified_fields.get("name") or "Contact")
+        card.designation = str(verified_fields.get("designation") or verified_fields.get("title") or "")
+        card.company_name = str(verified_fields.get("company_name") or verified_fields.get("company") or "")
+        card.phone = str(verified_fields.get("phone") or "")
+        card.email = str(verified_fields.get("email") or "")
+        card.website = str(verified_fields.get("website") or "")
+        card.address = str(verified_fields.get("address") or "")
+
+    # Set document status to verified
+    doc.status = DocumentStatus.VERIFIED.value
+    # Keep raw_fields in sync
+    raw = doc.raw_fields_json or {}
+    raw["fields"] = verified_fields
+    if items is not None:
+        raw["line_items"] = items
+    doc.raw_fields_json = dict(raw)
+
+    session.flush()
+
+    log_processing_step(
+        session=session,
+        document_id=doc.id,
+        step_name="human_verification",
+        status="verified",
+        details=f"Promoted to official confirmed table: {category}",
     )
-    return list(session.scalars(stmt).all())
+    return doc
 
 
-def find_image_with_max_objects(session: Session) -> Optional[Tuple[Image, int]]:
-    """Find the single image containing the highest total object count."""
-    subq = (
-        select(Detection.image_id, func.sum(Detection.count).label("total_objs"))
-        .group_by(Detection.image_id)
-        .order_by(desc("total_objs"))
-        .limit(1)
-        .subquery()
-    )
-    stmt = select(Image, subq.c.total_objs).join(subq, Image.id == subq.c.image_id)
-    row = session.execute(stmt).first()
-    if row:
-        return row[0], int(row[1])
-    return None
+def get_dashboard_metrics(session: Session) -> Dict[str, Any]:
+    """Retrieve operational dashboard counts and status splits."""
+    total_docs = session.scalar(select(func.count(Document.id))) or 0
+    verified_docs = session.scalar(
+        select(func.count(Document.id)).where(Document.status == DocumentStatus.VERIFIED.value)
+    ) or 0
+    processed_docs = session.scalar(
+        select(func.count(Document.id)).where(Document.status == DocumentStatus.PROCESSED.value)
+    ) or 0
+    rejected_docs = session.scalar(
+        select(func.count(Document.id)).where(Document.status == DocumentStatus.REJECTED.value)
+    ) or 0
+    failed_docs = session.scalar(
+        select(func.count(Document.id)).where(Document.status == DocumentStatus.FAILED.value)
+    ) or 0
 
+    avg_conf = session.scalar(select(func.avg(Document.ocr_confidence))) or 0.0
 
-def find_compound_images(
-    session: Session,
-    environment: Optional[str],
-    min_vehicles: int = 0,
-    min_persons: int = 0,
-) -> List[Image]:
-    """Find outdoor images containing minimum counts of vehicles and persons."""
-    stmt = select(Image)
-    if environment:
-        stmt = stmt.where(Image.environment.ilike(environment))
-
-    candidate_images = list(session.scalars(stmt).all())
-    matching: List[Image] = []
-    for img in candidate_images:
-        vehicle_count = sum(
-            d.count for d in img.detections if d.category == "Vehicles"
-        )
-        person_count = sum(
-            d.count for d in img.detections if d.label.lower() in ("person", "people")
-        )
-        if vehicle_count >= min_vehicles and person_count >= min_persons:
-            matching.append(img)
-    return matching
-
-
-def find_images_by_category(session: Session, category: str) -> List[Image]:
-    """Find all images classified under or containing detections of a category."""
-    stmt = (
-        select(Image)
-        .where(
-            or_(
-                Image.category.ilike(f"%{category}%"),
-                Image.detections.any(Detection.category.ilike(f"%{category}%")),
-            )
-        )
-        .distinct()
-    )
-    return list(session.scalars(stmt).all())
-
-
-# -------------------------------------------------------------
-# Analytics Aggregation Engine
-# -------------------------------------------------------------
-
-def get_analytics_summary(session: Session) -> Dict[str, Any]:
-    """Aggregate real database metrics for Chart.js visualizations."""
-    total_images = session.scalar(select(func.count(Image.id))) or 0
-    total_objects = session.scalar(select(func.sum(Detection.count))) or 0
-    total_anomalies = session.scalar(select(func.count(Anomaly.image_id))) or 0
-
-    # Top detected objects
-    top_obj_rows = (
-        session.query(Detection.label, func.sum(Detection.count).label("total"))
-        .group_by(Detection.label)
-        .order_by(desc("total"))
-        .limit(8)
-        .all()
-    )
-    top_objects = {
-        "labels": [r[0] for r in top_obj_rows],
-        "counts": [int(r[1]) for r in top_obj_rows],
-    }
-
-    # Category distribution
+    # Category counts
     cat_rows = (
-        session.query(Image.category, func.count(Image.id).label("total"))
-        .group_by(Image.category)
-        .order_by(desc("total"))
+        session.query(Document.category, func.count(Document.id))
+        .group_by(Document.category)
         .all()
     )
-    category_dist = {
-        "labels": [r[0] for r in cat_rows],
-        "counts": [int(r[1]) for r in cat_rows],
+    cat_counts = {r[0]: r[1] for r in cat_rows}
+
+    return {
+        "total_documents": total_docs,
+        "verified_count": verified_docs,
+        "pending_review": processed_docs,
+        "rejected_count": rejected_docs,
+        "failed_count": failed_docs,
+        "average_confidence": round(float(avg_conf), 2),
+        "status_counts": {
+            "verified": verified_docs,
+            "processed": processed_docs,
+            "pending": processed_docs,  # Backwards compatibility alias
+            "rejected": rejected_docs,
+            "failed": failed_docs,
+        },
+        "category_counts": cat_counts,
+        "type_counts": cat_counts,  # Backwards compatibility alias
     }
 
-    # Environment distribution (Indoor vs Outdoor)
-    env_rows = (
-        session.query(Image.environment, func.count(Image.id))
-        .group_by(Image.environment)
-        .all()
-    )
-    env_dist = {
-        "labels": [r[0] or "Unknown" for r in env_rows],
-        "counts": [int(r[1]) for r in env_rows],
-    }
 
-    # Scene distribution
-    scene_rows = (
-        session.query(Image.scene, func.count(Image.id).label("total"))
-        .group_by(Image.scene)
-        .order_by(desc("total"))
-        .limit(6)
-        .all()
-    )
-    scene_dist = {
-        "labels": [r[0] or "General" for r in scene_rows],
-        "counts": [int(r[1]) for r in scene_rows],
-    }
+def get_analytics_data(session: Session) -> Dict[str, Any]:
+    """Aggregate comprehensive analytics metrics for Chart.js visualizations.
 
-    # Monthly upload trend
+    Includes:
+    - category distribution
+    - monthly trend
+    - success vs failure
+    - receipt expenses
+    - top shops by spend
+    - student marks comparison
+    """
+    metrics = get_dashboard_metrics(session)
+
+    # 1. Monthly trend
     dialect_name = ""
     try:
         bind = session.get_bind()
@@ -412,30 +422,105 @@ def get_analytics_summary(session: Session) -> Dict[str, Any]:
         dialect_name = "sqlite"
 
     month_col = (
-        func.strftime("%Y-%m", Image.created_at)
+        func.strftime("%Y-%m", Document.created_at)
         if "sqlite" in dialect_name
-        else func.date_format(Image.created_at, "%Y-%m")
+        else func.date_format(Document.created_at, "%Y-%m")
     )
-    trend_rows = (
-        session.query(month_col.label("month_str"), func.count(Image.id))
+    monthly_rows = (
+        session.query(
+            month_col.label("month_str"),
+            func.count(Document.id).label("doc_count"),
+        )
         .group_by(month_col)
         .order_by(month_col)
         .limit(12)
         .all()
     )
     monthly_trend = {
-        "labels": [str(r[0]) for r in trend_rows] if trend_rows else ["Current Month"],
-        "counts": [int(r[1]) for r in trend_rows] if trend_rows else [total_images],
+        "labels": [str(r[0]) for r in monthly_rows] if monthly_rows else ["Current Month"],
+        "values": [int(r[1]) for r in monthly_rows] if monthly_rows else [metrics["total_documents"]],
     }
 
+    # 2. Receipt expenses, categories, and top shops by spend (Slide 6 #5 Spending Dashboard)
+    receipt_rows = (
+        session.query(Receipt.shop_name, func.sum(Receipt.total_amount), func.count(Receipt.id))
+        .group_by(Receipt.shop_name)
+        .order_by(desc(func.sum(Receipt.total_amount)))
+        .limit(8)
+        .all()
+    )
+    top_shops = {
+        "labels": [r[0] for r in receipt_rows],
+        "expenses": [round(float(r[1]), 2) for r in receipt_rows],
+        "counts": [r[2] for r in receipt_rows],
+    }
+
+    # Spend by category
+    cat_spend_rows = (
+        session.query(Receipt.category, func.sum(Receipt.total_amount), func.count(Receipt.id))
+        .group_by(Receipt.category)
+        .order_by(desc(func.sum(Receipt.total_amount)))
+        .all()
+    )
+    spend_by_category = {
+        "labels": [r[0] for r in cat_spend_rows] if cat_spend_rows else ["Grocery"],
+        "expenses": [round(float(r[1]), 2) for r in cat_spend_rows] if cat_spend_rows else [0.0],
+        "counts": [r[2] for r in cat_spend_rows] if cat_spend_rows else [0],
+    }
+
+    # Spend by month (Slide 6 #5)
+    receipt_month_col = (
+        func.strftime("%Y-%m", Receipt.created_at)
+        if "sqlite" in dialect_name
+        else func.date_format(Receipt.created_at, "%Y-%m")
+    )
+    month_spend_rows = (
+        session.query(
+            receipt_month_col.label("month_str"),
+            func.sum(Receipt.total_amount).label("total_spent"),
+            func.count(Receipt.id).label("receipt_count"),
+        )
+        .group_by(receipt_month_col)
+        .order_by(receipt_month_col)
+        .limit(12)
+        .all()
+    )
+    spend_by_month = {
+        "labels": [str(r[0]) for r in month_spend_rows] if month_spend_rows else ["Current Month"],
+        "expenses": [round(float(r[1] or 0), 2) for r in month_spend_rows] if month_spend_rows else [0.0],
+        "counts": [int(r[2]) for r in month_spend_rows] if month_spend_rows else [0],
+    }
+
+    # Total confirmed expenses
+    total_spend = session.scalar(select(func.sum(Receipt.total_amount))) or 0.0
+
+    # 3. Student performance comparison
+    student_rows = (
+        session.query(Student.name, Student.percentage, Student.result)
+        .order_by(desc(Student.percentage))
+        .limit(6)
+        .all()
+    )
+    student_comparison = {
+        "labels": [r[0] for r in student_rows],
+        "percentages": [round(float(r[1]), 1) for r in student_rows],
+        "results": [r[2] for r in student_rows],
+    }
+
+    # 4. Success vs Failure
+    success_count = metrics["verified_count"] + metrics["pending_review"]
+    failure_count = metrics["rejected_count"] + metrics["failed_count"]
+
     return {
-        "has_data": total_images > 0,
-        "total_images": total_images,
-        "total_objects": int(total_objects),
-        "total_anomalies": total_anomalies,
-        "top_objects": top_objects,
-        "category_dist": category_dist,
-        "env_dist": env_dist,
-        "scene_dist": scene_dist,
+        "metrics": metrics,
+        "total_spend": round(float(total_spend), 2),
         "monthly_trend": monthly_trend,
+        "top_shops": top_shops,
+        "spend_by_category": spend_by_category,
+        "spend_by_month": spend_by_month,
+        "student_comparison": student_comparison,
+        "success_vs_failure": {
+            "success": success_count,
+            "failure": failure_count,
+        },
     }

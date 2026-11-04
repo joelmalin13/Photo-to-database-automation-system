@@ -1,250 +1,281 @@
-"""HTML Page routing and Jinja2 server-rendered views for PixelMind.
+"""HTML page and HTMX partial routes for SnapBase application.
 
-Renders responsive views styled with Tailwind CSS, Alpine.js, and HTMX.
+Renders Jinja2 templates for:
+- Home Dashboard (/)
+- Upload Documents (/upload)
+- Image Processing (/image-processing)
+- Extracted Information & Review (/review, /review/{doc_id})
+- Database Records (/records)
+- Analytics (/analytics)
+- Export Reports (/reports)
+- Settings (/settings)
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
-from app.services.analytics_service import AnalyticsService
-from app.services.dna_service import DnaService
-from app.services.image_service import ImageService
-from app.services.search_service import SearchService
+from app.services.document_service import DocumentService
+from app.services.stats_service import StatsService
 from config.settings import (
-    AI_MODE,
     BASE_DIR,
+    CONFIDENCE_THRESHOLD,
+    DEFAULT_ENGINE,
     GEMINI_API_KEY,
-    GEMINI_EMBED_MODEL,
     GEMINI_MODEL,
-    IS_VERCEL,
-    STORAGE_BACKEND,
-    SUPABASE_BUCKET,
-    SUPABASE_URL,
-    load_categories_config,
-    load_scenes_config,
+    THEME_PRIMARY,
+    load_schemas,
 )
-from db.crud import get_image_by_id
 from db.session import get_db_status
 
-router = APIRouter(include_in_schema=False)
+pages_router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
 
-def media_url(path: Optional[str]) -> str:
-    """Format stored image path as a usable URL for templates."""
-    if not path:
-        return ""
-    if path.startswith("http://") or path.startswith("https://"):
-        return path
-    return f"/{path.lstrip('/')}"
-
-
-templates.env.filters["media_url"] = media_url
-templates.env.globals["media_url"] = media_url
-
-
-def _base_context(request: Request, active_page: str) -> Dict[str, Any]:
-    """Compile common context variables for layout navigation."""
+def _base_context(request: Request, active_page: str, title: str) -> Dict[str, Any]:
+    """Construct shared navigation, database health, and engine context."""
+    db_stat = get_db_status()
     return {
         "request": request,
         "active_page": active_page,
-        "db_status": get_db_status(),
-        "app_name": "PIXELMIND",
-        "tagline": "Every Image Has Data. Make It Searchable.",
+        "page_title": title,
+        "db_status": db_stat,
+        "db_engine": db_stat.get("engine_name", "SQLite"),
+        "db_is_fallback": db_stat.get("is_fallback", False),
+        "gemini_active": bool(GEMINI_API_KEY),
+        "engine_name": DEFAULT_ENGINE.upper(),
+        "model_name": GEMINI_MODEL,
+        "primary_color": THEME_PRIMARY,
     }
 
 
-@router.get("/", response_class=HTMLResponse)
-def dashboard_page(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    """Render home analytics and KPI summary dashboard."""
-    ctx = _base_context(request, "dashboard")
-    analytics = AnalyticsService(db).get_dashboard_metrics()
-    ctx["analytics"] = analytics
-
-    # Recent images
-    images, _ = ImageService(db).list_gallery(page=1, page_size=6)
-    ctx["recent_images"] = images
+@pages_router.get("/", response_class=HTMLResponse)
+def dashboard_page(
+    request: Request, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    """Render central analytics and KPI dashboard."""
+    stats = StatsService(db).get_dashboard_data()
+    ctx = _base_context(request, "dashboard", "Dashboard")
+    ctx["stats"] = stats
     return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
 
 
-@router.get("/upload", response_class=HTMLResponse)
+@pages_router.get("/upload", response_class=HTMLResponse)
 def upload_page(request: Request) -> HTMLResponse:
-    """Render multi-file upload portal."""
-    ctx = _base_context(request, "upload")
+    """Render drag-and-drop document upload and camera capture interface."""
+    schemas = load_schemas()
+    ctx = _base_context(request, "upload", "Upload Documents")
+    ctx["schemas"] = schemas
     return templates.TemplateResponse(request=request, name="upload.html", context=ctx)
 
 
-@router.get("/gallery", response_class=HTMLResponse)
-def gallery_page(
-    request: Request,
-    category: Optional[str] = Query(None),
-    label: Optional[str] = Query(None),
-    environment: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    db: Session = Depends(get_db),
+@pages_router.get("/image-processing", response_class=HTMLResponse)
+def image_processing_page(request: Request) -> HTMLResponse:
+    """Render interactive computer vision enhancement playground."""
+    ctx = _base_context(request, "image_processing", "Image Processing Playground")
+    return templates.TemplateResponse(request=request, name="image_processing.html", context=ctx)
+
+
+@pages_router.get("/review", response_class=HTMLResponse)
+def review_default_page(
+    request: Request, db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    """Render visual gallery with filtering, sorting, and pagination."""
-    ctx = _base_context(request, "gallery")
-    service = ImageService(db)
-    items, total = service.list_gallery(
-        category=category,
-        label=label,
-        environment=environment,
-        search=search,
-        page=page,
-        page_size=12,
+    """Render verification editor for first pending document or empty state."""
+    service = DocumentService(db)
+    docs, _ = service.list_documents(status="processed", page=1, page_size=1)
+    if docs:
+        return review_document_page(docs[0]["id"], request, db)
+    # Check any document if none are unverified
+    all_docs, _ = service.list_documents(page=1, page_size=1)
+    if all_docs:
+        return review_document_page(all_docs[0]["id"], request, db)
+
+    ctx = _base_context(request, "review", "Extracted Information Review")
+    ctx["document"] = None
+    return templates.TemplateResponse(request=request, name="review.html", context=ctx)
+
+
+@pages_router.get("/review/{doc_id}", response_class=HTMLResponse)
+def review_document_page(
+    doc_id: int, request: Request, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    """Render split-screen verification interface for a specific document."""
+    service = DocumentService(db)
+    doc = service.get_document(doc_id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Document not found."
+        )
+
+    all_docs, _ = service.list_documents(page=1, page_size=100)
+    schemas = load_schemas()
+    category_key = doc.get("category", "receipts")
+    if category_key == "receipt_invoice":
+        category_key = "receipts"
+    elif category_key in ("student_marksheet", "student_id_form"):
+        category_key = "students"
+    elif category_key == "business_card":
+        category_key = "business_cards"
+
+    schema_def = schemas.get(category_key, schemas.get("receipts", {}))
+
+    ctx = _base_context(request, "review", f"Review #{doc_id}")
+    ctx.update(
+        {
+            "document": doc,
+            "all_docs": all_docs,
+            "schema_fields": schema_def.get("fields", []),
+            "confidence_threshold": CONFIDENCE_THRESHOLD,
+        }
     )
-    ctx["items"] = items
-    ctx["total"] = total
-    ctx["page"] = page
-    ctx["total_pages"] = max(1, (total + 11) // 12)
-    ctx["category_filter"] = category or "all"
-    ctx["env_filter"] = environment or "all"
-    ctx["search_query"] = search or ""
-    ctx["categories"] = load_scenes_config().get("canonical_categories", [])
-    return templates.TemplateResponse(request=request, name="gallery.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="review.html", context=ctx)
 
 
-@router.get("/partials/gallery-grid", response_class=HTMLResponse)
-def gallery_grid_partial(
+@pages_router.get("/records", response_class=HTMLResponse)
+def records_page(
     request: Request,
-    category: Optional[str] = Query(None),
-    label: Optional[str] = Query(None),
-    environment: Optional[str] = Query(None),
+    category: Optional[str] = Query(None, alias="doc_type"),
+    status_filter: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """HTMX partial rendering filtered image cards and pagination."""
-    service = ImageService(db)
-    items, total = service.list_gallery(
+    """Render confirmed database records repository with live search and filtering."""
+    service = DocumentService(db)
+    items, total = service.list_documents(
         category=category,
-        label=label,
-        environment=environment,
-        search=search,
+        status=status_filter,
+        search_query=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
         page=page,
-        page_size=12,
+        page_size=10,
+    )
+    ctx = _base_context(request, "records", "Database Records")
+    ctx.update(
+        {
+            "items": items,
+            "total": total,
+            "page": page,
+            "total_pages": max(1, (total + 9) // 10),
+            "schemas": load_schemas(),
+            "current_type": category or "all",
+            "current_status": status_filter or "all",
+            "search_query": search or "",
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        }
+    )
+    return templates.TemplateResponse(request=request, name="records.html", context=ctx)
+
+
+@pages_router.get("/analytics", response_class=HTMLResponse)
+def analytics_page(
+    request: Request, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    """Render dedicated analytics dashboards with Chart.js charts."""
+    analytics = StatsService(db).get_full_analytics()
+    ctx = _base_context(request, "analytics", "Operational Analytics")
+    ctx["analytics"] = analytics
+    return templates.TemplateResponse(request=request, name="analytics.html", context=ctx)
+
+
+@pages_router.get("/reports", response_class=HTMLResponse)
+def reports_page(
+    request: Request, db: Session = Depends(get_db)
+) -> HTMLResponse:
+    """Render formatted export reports and executive summary downloads."""
+    stats = StatsService(db).get_dashboard_data()
+    ctx = _base_context(request, "reports", "Export Reports")
+    ctx["stats"] = stats
+    ctx["schemas"] = load_schemas()
+    return templates.TemplateResponse(request=request, name="reports.html", context=ctx)
+
+
+@pages_router.get("/partials/records-table", response_class=HTMLResponse)
+def partial_records_table(
+    request: Request,
+    category: Optional[str] = Query(None, alias="doc_type"),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    search: Optional[str] = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+    page: int = Query(1, ge=1),
+    db: Session = Depends(get_db),
+) -> HTMLResponse:
+    """Return HTMX partial snippet for records table."""
+    service = DocumentService(db)
+    items, total = service.list_documents(
+        category=category,
+        status=status_filter,
+        search_query=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=10,
     )
     ctx = {
         "request": request,
         "items": items,
         "total": total,
         "page": page,
-        "total_pages": max(1, (total + 11) // 12),
-        "category_filter": category or "all",
-        "env_filter": environment or "all",
+        "total_pages": max(1, (total + 9) // 10),
+        "current_type": category or "all",
+        "current_status": status_filter or "all",
+        "search_query": search or "",
     }
-    return templates.TemplateResponse(request=request, name="partials/gallery_grid.html", context=ctx)
+    return templates.TemplateResponse(
+        request=request, name="partials/records_table.html", context=ctx
+    )
 
 
-@router.get("/images/{image_id}", response_class=HTMLResponse)
-def image_detail_page(image_id: int, request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    """Render comprehensive image detail view with DNA card and detections."""
-    img = get_image_by_id(db, image_id)
-    if not img:
-        raise HTTPException(status_code=404, detail="Image record not found.")
-
-    ctx = _base_context(request, "gallery")
-    ctx["image"] = img
-    # Similar images
-    similar = DnaService(db).find_similar_to_stored(image_id, mode="overall", limit=4)
-    ctx["similar_images"] = similar
-    return templates.TemplateResponse(request=request, name="image_detail.html", context=ctx)
-
-
-@router.get("/search", response_class=HTMLResponse)
-def search_page(request: Request, q: Optional[str] = Query(None), db: Session = Depends(get_db)) -> HTMLResponse:
-    """Render natural language search portal."""
-    ctx = _base_context(request, "search")
-    ctx["query"] = q or ""
-    results = []
-    if q and q.strip():
-        results = SearchService(db).natural_language_search(q.strip(), limit=20)
-    ctx["results"] = results
-    return templates.TemplateResponse(request=request, name="search.html", context=ctx)
-
-
-@router.get("/partials/search-results", response_class=HTMLResponse)
-def search_results_partial(request: Request, q: str = Query(""), db: Session = Depends(get_db)) -> HTMLResponse:
-    """HTMX partial for debounced live search results."""
-    results = []
-    if q and q.strip():
-        results = SearchService(db).natural_language_search(q.strip(), limit=20)
-    ctx = {"request": request, "results": results, "query": q}
-    return templates.TemplateResponse(request=request, name="partials/search_results.html", context=ctx)
-
-
-@router.get("/ask", response_class=HTMLResponse)
-def ask_page(request: Request) -> HTMLResponse:
-    """Render Ask Your Images conversational interface."""
-    ctx = _base_context(request, "ask")
-    return templates.TemplateResponse(request=request, name="ask.html", context=ctx)
-
-
-@router.post("/partials/ask-response", response_class=HTMLResponse)
-def ask_response_partial(request: Request, question: str = Form(...), db: Session = Depends(get_db)) -> HTMLResponse:
-    """HTMX partial for Ask Your Images query answer."""
-    res = SearchService(db).ask_images(question)
-    ctx = {"request": request, "result": res}
-    return templates.TemplateResponse(request=request, name="partials/ask_response.html", context=ctx)
-
-
-@router.get("/similar", response_class=HTMLResponse)
-def similar_page(request: Request) -> HTMLResponse:
-    """Render reverse image intelligence portal."""
-    ctx = _base_context(request, "similar")
-    return templates.TemplateResponse(request=request, name="similar.html", context=ctx)
-
-
-@router.post("/partials/similar-results", response_class=HTMLResponse)
-async def similar_results_partial(
-    request: Request,
-    file: UploadFile = Form(...),
-    mode: str = Form("overall"),
-    db: Session = Depends(get_db),
+@pages_router.get("/partials/drawer/{doc_id}", response_class=HTMLResponse)
+def partial_detail_drawer(
+    doc_id: int, request: Request, db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    """HTMX partial displaying reverse image matches."""
-    content = await file.read()
-    matches = []
-    error = None
-    if content:
-        try:
-            matches = DnaService(db).find_similar_by_image(content, mode=mode, limit=12)
-        except Exception as exc:
-            error = str(exc)
-
-    ctx = {"request": request, "matches": matches, "mode": mode, "error": error}
-    return templates.TemplateResponse(request=request, name="partials/similar_results.html", context=ctx)
+    """Return HTMX partial snippet for slide drawer inspection."""
+    service = DocumentService(db)
+    doc = service.get_document(doc_id)
+    if not doc:
+        return HTMLResponse("<div class='p-4 text-red-600'>Document not found</div>")
+    ctx = {"request": request, "document": doc}
+    return templates.TemplateResponse(
+        request=request, name="partials/drawer.html", context=ctx
+    )
 
 
-@router.get("/analytics", response_class=HTMLResponse)
-def analytics_page(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
-    """Render deep analytics and Chart.js visualizations."""
-    ctx = _base_context(request, "analytics")
-    ctx["analytics"] = AnalyticsService(db).get_dashboard_metrics()
-    return templates.TemplateResponse(request=request, name="analytics.html", context=ctx)
+@pages_router.get("/file/image/{doc_id}")
+def serve_document_image(
+    doc_id: int, db: Session = Depends(get_db)
+) -> FileResponse:
+    """Serve preprocessed image from filesystem."""
+    service = DocumentService(db)
+    doc = service.get_document(doc_id)
+    if not doc or not Path(doc["image_path"]).exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found."
+        )
+    return FileResponse(doc["image_path"])
 
 
-@router.get("/settings", response_class=HTMLResponse)
+@pages_router.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request) -> HTMLResponse:
-    """Render settings and diagnostic telemetry."""
-    ctx = _base_context(request, "settings")
-    ctx.update({
-        "ai_mode": AI_MODE,
-        "is_vercel": IS_VERCEL,
-        "detector_model": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n (CPU)",
-        "embedder_model": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",
-        "has_gemini_key": bool(GEMINI_API_KEY),
-        "storage_backend": STORAGE_BACKEND,
-        "supabase_configured": bool(SUPABASE_URL),
-        "supabase_bucket": SUPABASE_BUCKET,
-    })
+    """Render system settings and live MySQL/SQLite connection diagnostic view."""
+    ctx = _base_context(request, "settings", "Settings")
+    ctx.update(
+        {
+            "engine": DEFAULT_ENGINE,
+            "model": GEMINI_MODEL,
+            "threshold": int(CONFIDENCE_THRESHOLD * 100),
+            "theme_accent": THEME_PRIMARY,
+        }
+    )
     return templates.TemplateResponse(request=request, name="settings.html", context=ctx)

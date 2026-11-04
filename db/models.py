@@ -1,226 +1,361 @@
-"""SQLAlchemy 2.0 ORM database models for PixelMind.
+"""SQLAlchemy 2.0 ORM models for SnapBase.
 
-Defines the normalized relational schema for images, detections,
-Image DNA fingerprints, statistical anomalies, and processing audit logs.
-Embeddings are stored as JSON arrays of floats for cross-database portability.
+Defines the normalized database schema:
+- User
+- Document (Master table holding raw extraction & OCR confidence)
+- Receipt & ReceiptItem (Confirmed receipt data)
+- Student & Mark (Confirmed academic marksheet data)
+- BusinessCard (Confirmed contact card data)
+- ProcessingHistory (Audit log of every pipeline operation)
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+import json
 from typing import Any, Dict, List, Optional
-import numpy as np
+
 from sqlalchemy import (
+    Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
-    Index,
     Integer,
-    LargeBinary,
+    Numeric,
     String,
     Text,
 )
-from sqlalchemy.dialects.mysql import JSON as MySQLJSON
+from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
+from config.settings import DocumentCategory, DocumentStatus
+
+
+def utc_now() -> datetime:
+    """Provide current timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
+
 
 class Base(DeclarativeBase):
-    """SQLAlchemy 2.0 declarative base with generic JSON dialect fallback."""
-
-    type_annotation_map = {
-        dict: JSON().with_variant(MySQLJSON, "mysql"),
-        list: JSON().with_variant(MySQLJSON, "mysql"),
-    }
+    """Declarative base class for all SnapBase database entities."""
+    pass
 
 
-class Image(Base):
-    """Primary visual intelligence entity representing an ingested photograph."""
+class User(Base):
+    """System user or operator entity."""
 
-    __tablename__ = "images"
+    __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+
+    documents: Mapped[List[Document]] = relationship("Document", back_populates="user")
+
+
+class Document(Base):
+    """Master document entity storing raw OCR results, confidence, and status."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    stored_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    annotated_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
-    phash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    width: Mapped[int] = mapped_column(Integer, nullable=False)
-    height: Mapped[int] = mapped_column(Integer, nullable=False)
-    category: Mapped[str] = mapped_column(String(100), nullable=False, default="Uncategorized", index=True)
-    scene: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
-    environment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, index=True)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, default="done", index=True)
-    caption: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    image_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    image_hash: Mapped[str] = mapped_column(
+        String(64), unique=True, nullable=False, index=True
+    )
+    category: Mapped[str] = mapped_column(
+        String(50), nullable=False, default=DocumentCategory.RECEIPTS.value, index=True
+    )
+    ocr_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ocr_confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=DocumentStatus.PROCESSED.value,
+        index=True,
+    )
+    raw_fields_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utc_now, nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=utc_now, onupdate=utc_now, nullable=False
+    )
 
     # Relationships
-    detections: Mapped[List[Detection]] = relationship(
-        "Detection", back_populates="image", cascade="all, delete-orphan", lazy="selectin"
+    user: Mapped[Optional[User]] = relationship("User", back_populates="documents")
+    receipt: Mapped[Optional[Receipt]] = relationship(
+        "Receipt", back_populates="document", uselist=False, cascade="all, delete-orphan"
     )
-    dna: Mapped[Optional[ImageDNA]] = relationship(
-        "ImageDNA", back_populates="image", cascade="all, delete-orphan", uselist=False, lazy="selectin"
+    student: Mapped[Optional[Student]] = relationship(
+        "Student", back_populates="document", uselist=False, cascade="all, delete-orphan"
     )
-    anomaly: Mapped[Optional[Anomaly]] = relationship(
-        "Anomaly", back_populates="image", cascade="all, delete-orphan", uselist=False, lazy="selectin"
+    business_card: Mapped[Optional[BusinessCard]] = relationship(
+        "BusinessCard", back_populates="document", uselist=False, cascade="all, delete-orphan"
     )
-    logs: Mapped[List[ProcessingLog]] = relationship(
-        "ProcessingLog", back_populates="image", cascade="all, delete-orphan", lazy="selectin"
+    history: Mapped[List[ProcessingHistory]] = relationship(
+        "ProcessingHistory",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="ProcessingHistory.id.desc()",
     )
-
-    @property
-    def image_url(self) -> str:
-        """Resolve public URL for original image."""
-        if not self.stored_path:
-            return ""
-        if self.stored_path.startswith("http://") or self.stored_path.startswith("https://"):
-            return self.stored_path
-        return f"/{self.stored_path.lstrip('/')}"
-
-    @property
-    def display_annotated_url(self) -> str:
-        """Resolve public URL for annotated visualization (falls back to original)."""
-        path = self.annotated_path or self.stored_path
-        if not path:
-            return ""
-        if path.startswith("http://") or path.startswith("https://"):
-            return path
-        return f"/{path.lstrip('/')}"
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert image entity to dictionary representation."""
+        """Serialize document and its extracted or confirmed data."""
+        raw_data = self.raw_fields_json or {}
+        # Backwards compatible alias properties
+        extracted_fields = raw_data.get("fields", {}) if isinstance(raw_data, dict) else {}
+        confidences = raw_data.get("confidences", {}) if isinstance(raw_data, dict) else {}
+        line_items = raw_data.get("line_items", []) if isinstance(raw_data, dict) else []
+
+        confirmed = None
+        if self.receipt:
+            confirmed = self.receipt.to_dict()
+        elif self.student:
+            confirmed = self.student.to_dict()
+        elif self.business_card:
+            confirmed = self.business_card.to_dict()
+
         return {
             "id": self.id,
             "filename": self.filename,
-            "stored_path": self.stored_path,
-            "annotated_path": self.annotated_path,
-            "image_url": self.image_url,
-            "annotated_url": self.display_annotated_url,
-            "sha256": self.sha256,
-            "phash": self.phash,
-            "width": self.width,
-            "height": self.height,
+            "image_path": self.image_path,
+            "image_hash": self.image_hash,
             "category": self.category,
-            "scene": self.scene,
-            "environment": self.environment,
+            "type": self.category,  # Compatibility alias
             "status": self.status,
-            "caption": self.caption,
+            "ocr_text": self.ocr_text,
+            "ocr_confidence": round(float(self.ocr_confidence), 4),
+            "confidence": round(float(self.ocr_confidence), 2),  # Compatibility alias
+            "fields": extracted_fields,
+            "field_confidences": confidences,
+            "line_items": line_items,
+            "confirmed_data": confirmed,
+            "is_verified": self.status == DocumentStatus.VERIFIED.value,
+            "engine_used": raw_data.get("engine_used", "EasyOCR") if isinstance(raw_data, dict) else "EasyOCR",
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "detections_count": sum(d.count for d in self.detections) if self.detections else 0,
-            "labels": [d.label for d in self.detections] if self.detections else [],
-            "has_anomaly": self.anomaly is not None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
 
-class Detection(Base):
-    """Individual object class detected in an image."""
+class Receipt(Base):
+    """Confirmed commercial receipt or invoice record matching Slide 5."""
 
-    __tablename__ = "detections"
+    __tablename__ = "receipts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    image_id: Mapped[int] = mapped_column(Integer, ForeignKey("images.id", ondelete="CASCADE"), nullable=False, index=True)
-    label: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    avg_confidence: Mapped[float] = mapped_column(Float, nullable=False)
-    bbox_json: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    document_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("documents.id", ondelete="CASCADE"), unique=True, nullable=True
+    )
+    shop_name: Mapped[str] = mapped_column(String(150), nullable=False, index=True)
+    date: Mapped[Optional[datetime.date]] = mapped_column(Date, nullable=True, index=True)
+    total_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    pincode: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    category: Mapped[str] = mapped_column(String(50), default="Grocery", nullable=False, index=True)
+    ocr_confidence: Mapped[float] = mapped_column(Float, default=0.85, nullable=False)
+    image_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    raw_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_verified: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    image_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    receipt_number: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    subtotal: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    tax_amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
 
-    image: Mapped[Image] = relationship("Image", back_populates="detections")
+    # Relationships
+    document: Mapped[Optional[Document]] = relationship("Document", back_populates="receipt")
+    items: Mapped[List[ReceiptItem]] = relationship(
+        "ReceiptItem", back_populates="receipt", cascade="all, delete-orphan"
+    )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert detection record to dictionary."""
+        """Convert receipt to dictionary matching Slide 5."""
         return {
             "id": self.id,
-            "image_id": self.image_id,
-            "label": self.label,
+            "document_id": self.document_id,
+            "shop_name": self.shop_name,
+            "date": self.date.isoformat() if self.date else None,
+            "total_amount": self.total_amount,
+            "phone": self.phone,
+            "email": self.email,
+            "pincode": self.pincode,
             "category": self.category,
-            "count": self.count,
-            "avg_confidence": round(self.avg_confidence, 3),
-            "bboxes": self.bbox_json or [],
-        }
-
-
-class ImageDNA(Base):
-    """Visual fingerprint storing dominant colors, composition summary, and embedding vector."""
-
-    __tablename__ = "image_dna"
-
-    image_id: Mapped[int] = mapped_column(Integer, ForeignKey("images.id", ondelete="CASCADE"), primary_key=True)
-    dominant_colors_json: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(JSON, nullable=True)
-    # Stored as JSON list of floats for universal database portability
-    embedding_json: Mapped[Optional[List[float]]] = mapped_column(JSON, nullable=True)
-    # Legacy blob field retained for backward compatibility
-    embedding_blob: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
-    composition_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    image: Mapped[Image] = relationship("Image", back_populates="dna")
-
-    def get_embedding_vector(self) -> Optional[np.ndarray]:
-        """Return embedding as a normalized numpy float32 array."""
-        if self.embedding_json:
-            try:
-                arr = np.array(self.embedding_json, dtype=np.float32)
-                norm = float(np.linalg.norm(arr))
-                return arr / norm if norm > 0 else arr
-            except Exception:
-                pass
-        if self.embedding_blob:
-            try:
-                arr = np.frombuffer(self.embedding_blob, dtype=np.float32)
-                norm = float(np.linalg.norm(arr))
-                return arr / norm if norm > 0 else arr
-            except Exception:
-                pass
-        return None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert DNA record to dictionary representation."""
-        has_emb = (self.embedding_json is not None) or (self.embedding_blob is not None)
-        emb_dims = len(self.embedding_json) if self.embedding_json else (512 if self.embedding_blob else 0)
-        return {
-            "image_id": self.image_id,
-            "dominant_colors": self.dominant_colors_json or [],
-            "composition": self.composition_json or {},
-            "has_embedding": has_emb,
-            "embedding_dims": emb_dims,
-        }
-
-
-class Anomaly(Base):
-    """Statistical outlier alert indicating unusual object combinations or counts."""
-
-    __tablename__ = "anomalies"
-
-    image_id: Mapped[int] = mapped_column(Integer, ForeignKey("images.id", ondelete="CASCADE"), primary_key=True)
-    reason: Mapped[str] = mapped_column(Text, nullable=False)
-    score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    image: Mapped[Image] = relationship("Image", back_populates="anomaly")
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert anomaly flag to dictionary."""
-        return {
-            "image_id": self.image_id,
-            "reason": self.reason,
-            "score": round(self.score, 2),
+            "ocr_confidence": round(float(self.ocr_confidence), 4),
+            "image_path": self.image_path,
+            "raw_text": self.raw_text,
+            "is_verified": self.is_verified,
+            "image_hash": self.image_hash,
+            "receipt_number": self.receipt_number,
+            "subtotal": self.subtotal,
+            "tax_amount": self.tax_amount,
+            "items": [it.to_dict() for it in self.items],
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
-class ProcessingLog(Base):
-    """Audit log recording ingestion and processing steps."""
+class ReceiptItem(Base):
+    """Line item within a confirmed receipt."""
 
-    __tablename__ = "processing_log"
+    __tablename__ = "receipt_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    image_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("images.id", ondelete="CASCADE"), nullable=True, index=True)
-    step: Mapped[str] = mapped_column(String(100), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    receipt_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("receipts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    item_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    unit_price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    total_price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-    image: Mapped[Optional[Image]] = relationship("Image", back_populates="logs")
+    receipt: Mapped[Receipt] = relationship("Receipt", back_populates="items")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "item_name": self.item_name,
+            "quantity": self.quantity,
+            "unit_price": self.unit_price,
+            "total_price": self.total_price,
+        }
+
+
+class Student(Base):
+    """Confirmed student marksheet record."""
+
+    __tablename__ = "students"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("documents.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    usn: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    college: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, index=True)
+    semester: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    total_marks: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    result: Mapped[str] = mapped_column(String(30), default="PASS", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+
+    # Relationships
+    document: Mapped[Document] = relationship("Document", back_populates="student")
+    marks: Mapped[List[Mark]] = relationship(
+        "Mark", back_populates="student", cascade="all, delete-orphan"
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "document_id": self.document_id,
+            "name": self.name,
+            "usn": self.usn,
+            "college": self.college,
+            "semester": self.semester,
+            "total_marks": self.total_marks,
+            "percentage": self.percentage,
+            "result": self.result,
+            "marks": [m.to_dict() for m in self.marks],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Mark(Base):
+    """Subject score within a student marksheet."""
+
+    __tablename__ = "marks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    student_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    subject_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    subject_code: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    marks_obtained: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    max_marks: Mapped[float] = mapped_column(Float, default=100.0, nullable=False)
+
+    student: Mapped[Student] = relationship("Student", back_populates="marks")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "subject_name": self.subject_name,
+            "subject_code": self.subject_code,
+            "marks_obtained": self.marks_obtained,
+            "max_marks": self.max_marks,
+        }
+
+
+class BusinessCard(Base):
+    """Confirmed visiting card contact details."""
+
+    __tablename__ = "business_cards"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("documents.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    person_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    designation: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String(150), nullable=True, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(120), nullable=True, index=True)
+    website: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+
+    document: Mapped[Document] = relationship("Document", back_populates="business_card")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "document_id": self.document_id,
+            "person_name": self.person_name,
+            "designation": self.designation,
+            "company_name": self.company_name,
+            "phone": self.phone,
+            "email": self.email,
+            "website": self.website,
+            "address": self.address,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ProcessingHistory(Base):
+    """Log entry recording each step and error during document processing."""
+
+    __tablename__ = "processing_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    step_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="success", nullable=False)
+    details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    execution_time_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False, index=True)
+
+    document: Mapped[Document] = relationship("Document", back_populates="history")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "document_id": self.document_id,
+            "step_name": self.step_name,
+            "status": self.status,
+            "details": self.details,
+            "execution_time_ms": self.execution_time_ms,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

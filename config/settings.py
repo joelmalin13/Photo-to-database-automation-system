@@ -1,131 +1,135 @@
-"""Global application configuration, environment settings, and directory definitions for PixelMind.
+"""Application configuration and centralized settings for SnapBase.
 
-Supports dual operating modes:
-- Cloud Mode (Vercel Serverless): Gemini 2.5 Flash, Supabase Storage, Hosted DB (Postgres/MySQL)
-- Local Mode (Desktop/Server): YOLOv8n, OpenCLIP ViT-B-32, Local Storage, SQLite/MySQL
+Provides directory paths, environment variable access, schema loaders,
+status enums, and structured logging configuration.
 """
 
 from __future__ import annotations
 
+from enum import Enum
 import json
 import logging
 import os
 from pathlib import Path
-import tempfile
 from typing import Any, Dict
+
 from dotenv import load_dotenv
 
 # Load environment variables from .env
 load_dotenv()
 
-# Detect environment
-IS_VERCEL = bool(os.getenv("VERCEL"))
-AI_MODE = os.getenv("AI_MODE", "cloud" if IS_VERCEL else "local").strip().lower()
+# Base project directories
+BASE_DIR: Path = Path(__file__).resolve().parent.parent
+CONFIG_DIR: Path = BASE_DIR / "config"
+DATA_DIR: Path = BASE_DIR / "data"
+UPLOAD_DIR: Path = DATA_DIR / "uploads"
+PROCESSED_DIR: Path = DATA_DIR / "processed"
+INBOX_DIR: Path = BASE_DIR / "inbox"
+FAILED_DIR: Path = BASE_DIR / "failed"
+LOGS_DIR: Path = DATA_DIR / "logs"
 
-# Directory structure
-BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_DIR = BASE_DIR / "config"
-PUBLIC_DIR = BASE_DIR / "public"
+# Ensure runtime directories exist
+for directory in (
+    DATA_DIR,
+    UPLOAD_DIR,
+    PROCESSED_DIR,
+    INBOX_DIR,
+    FAILED_DIR,
+    LOGS_DIR,
+):
+    directory.mkdir(parents=True, exist_ok=True)
 
-# Writable directory configuration: /tmp for serverless, local directories for workstation
-if IS_VERCEL:
-    TMP_ROOT = Path("/tmp")
-else:
-    TMP_ROOT = Path(tempfile.gettempdir())
+# Database credentials & URL configuration
+DB_USER: str = os.getenv("DB_USER", "root")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
+DB_HOST: str = os.getenv("DB_HOST", "localhost")
+DB_PORT: str = os.getenv("DB_PORT", "3306")
+DB_NAME: str = os.getenv("DB_NAME", "photo_automation")
 
-if IS_VERCEL or AI_MODE == "cloud":
-    DATA_DIR = TMP_ROOT / "pixelmind_data"
-    UPLOAD_DIR = TMP_ROOT / "pixelmind_uploads"
-    ANNOTATED_DIR = TMP_ROOT / "pixelmind_annotated"
-else:
-    DATA_DIR = BASE_DIR / "data"
-    UPLOAD_DIR = BASE_DIR / "uploads"
-    ANNOTATED_DIR = DATA_DIR / "annotated"
-
-SAMPLE_DATA_DIR = BASE_DIR / "sample_data"
-
-# Ensure directories exist where permitted
-try:
-    for directory in [DATA_DIR, UPLOAD_DIR, ANNOTATED_DIR]:
-        directory.mkdir(parents=True, exist_ok=True)
-except Exception:
-    pass
-
-# Database Configuration
-# Supports Supabase / Neon PostgreSQL (psycopg), MySQL (pymysql / mysql-connector), and SQLite
-DB_URL = os.getenv("DB_URL") or os.getenv("DATABASE_URL")
-DEFAULT_SQLITE_URL = f"sqlite:///{(DATA_DIR / 'pixelmind.db').as_posix()}"
-
-# Cloud AI Configuration (Google Gemini)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "text-embedding-004")
-
-# Supabase Storage Configuration (Cloud Storage)
-STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "supabase" if (IS_VERCEL or AI_MODE == "cloud") else "local").lower()
-SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "pixelmind-images")
-
-# Local AI Configuration (YOLO & CLIP)
-YOLO_MODEL_NAME = os.getenv("YOLO_MODEL_NAME", "yolov8n.pt")
-CLIP_MODEL_NAME = os.getenv("CLIP_MODEL_NAME", "ViT-B-32")
-CLIP_PRETRAINED = os.getenv("CLIP_PRETRAINED", "openai")
-CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.25"))
-
-# Ingestion constraints: 4 MB limit in cloud mode (under Vercel 4.5 MB request ceiling)
-if IS_VERCEL or AI_MODE == "cloud":
-    MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024  # 4 MB
-else:
-    MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
-
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-
-# Logging setup (StreamHandler for all; FileHandler only if local disk is writable)
-handlers: list[logging.Handler] = [logging.StreamHandler()]
-if not IS_VERCEL and AI_MODE != "cloud":
-    try:
-        log_file = DATA_DIR / "pixelmind.log"
-        handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
-    except Exception:
-        pass
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] [%(levelname)s] [pixelmind]: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=handlers,
+# Default MySQL connection string using mysql-connector-python
+DEFAULT_MYSQL_URL: str = (
+    f"mysql+mysqlconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
-logger = logging.getLogger("pixelmind")
+
+# SQLite fallback path
+SQLITE_DB_PATH: Path = DATA_DIR / "snapbase.db"
+DEFAULT_SQLITE_URL: str = f"sqlite:///{SQLITE_DB_PATH.as_posix()}"
+
+# Final configured DATABASE_URL (defaults to MySQL string, checked at runtime in db/session.py)
+DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_MYSQL_URL)
+
+# OCR and Extraction Engine settings
+# Specification: Default engine is EasyOCR; Tesseract & Gemini are optional via settings
+DEFAULT_ENGINE: str = os.getenv("DEFAULT_ENGINE", "ocr")  # 'ocr' (EasyOCR), 'tesseract', or 'gemini'
+GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+TESSERACT_CMD: str | None = os.getenv("TESSERACT_CMD")
+
+# Processing parameters
+CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.70"))
+MAX_IMAGE_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
+ALLOWED_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".png", ".webp"}
+
+# UI Palette and styling constants
+THEME_PRIMARY: str = "#C62828"
+THEME_SECONDARY: str = "#111111"
+THEME_BACKGROUND: str = "#FFFFFF"
+THEME_TEXT: str = "#111827"
+THEME_BORDER: str = "#E5E7EB"
 
 
-def load_categories_config() -> Dict[str, str]:
-    """Load label-to-category mapping from config/categories.json."""
-    cat_file = CONFIG_DIR / "categories.json"
-    if cat_file.exists():
-        with open(cat_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+class DocumentStatus(str, Enum):
+    """Lifecycle statuses matching official specification."""
+
+    UPLOADED = "uploaded"
+    PROCESSED = "processed"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
+    FAILED = "failed"
+    # Aliases for backwards compatibility with earlier components
+    PENDING = "processed"
 
 
-def load_scenes_config() -> Dict[str, Any]:
-    """Load scene definitions and environments from config/scenes.json."""
-    scene_file = CONFIG_DIR / "scenes.json"
-    if scene_file.exists():
-        with open(scene_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {
-        "scenes": [],
-        "environments": ["indoor", "outdoor"],
-        "canonical_categories": [
-            "Nature",
-            "Animals",
-            "Vehicles",
-            "Technology",
-            "Food",
-            "Architecture",
-            "Human activities",
-            "Sports",
-            "Electronics",
-        ],
-    }
+class DocumentCategory(str, Enum):
+    """Normalized document categories matching official schema."""
+
+    RECEIPTS = "receipts"
+    STUDENTS = "students"
+    BUSINESS_CARDS = "business_cards"
+    OTHER = "other"
+
+
+def load_schemas() -> Dict[str, Any]:
+    """Load and parse document field schemas from config/schemas.json."""
+    schemas_file = CONFIG_DIR / "schemas.json"
+    if not schemas_file.exists():
+        raise FileNotFoundError(f"Schema file not found at {schemas_file}")
+    with open(schemas_file, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def setup_logger(name: str = "snapbase") -> logging.Logger:
+    """Configure unified logger with both console and rotating file output."""
+    logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    log_file = LOGS_DIR / "snapbase.log"
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    return logger
+
+
+logger = setup_logger()

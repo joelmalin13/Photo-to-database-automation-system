@@ -1,117 +1,246 @@
 {% extends "base.html" %}
 
-{% block title %}Visual Analytics | PIXELMIND{% endblock %}
-
 {% block content %}
-<div class="space-y-8">
-  <!-- Header Title -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div class="space-y-6">
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
     <div>
-      <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">Visual Intelligence Analytics</h1>
-      <p class="text-sm text-gray-500 mt-1">Aggregated distribution of object classes, scene contexts, and ingestion patterns across the database.</p>
+      <h2 class="text-2xl font-extrabold text-gray-900 tracking-tight">Spending Dashboard &amp; Analytics</h2>
+      <p class="text-xs text-gray-500 mt-1">Slide 6 #5 Spending Dashboard &middot; Real-time charts of spending by month, category, and shop directly from SQLite.</p>
     </div>
-    <div class="text-xs text-gray-500 font-mono bg-white px-3 py-1.5 rounded-lg border border-[#E5E5E5] shadow-sm">
-      Status: <span class="text-emerald-600 font-bold">Live Database Telemetry</span>
-    </div>
+
+    <!-- Quick Export Link -->
+    <a 
+      href="/reports" 
+      class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+    >
+      <i data-lucide="download" class="w-4 h-4"></i>
+      <span>Export Detailed Reports</span>
+    </a>
   </div>
 
   <!-- Summary KPI Cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Total Indexed Images</div>
-      <div class="text-3xl font-black text-[#111111]">
-        {% if analytics.has_data %}{{ analytics.total_images }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
-      </div>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Total Ingested</span>
+      <div class="text-2xl font-extrabold text-gray-900 mt-1">{{ analytics.metrics.total_documents }}</div>
+      <div class="text-[11px] text-gray-400 mt-1">All captured documents</div>
     </div>
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Total Objects Detected</div>
-      <div class="text-3xl font-black text-[#C62828]">
-        {% if analytics.has_data %}{{ analytics.total_objects }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
-      </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Confirmed Verified</span>
+      <div class="text-2xl font-extrabold text-emerald-600 mt-1">{{ analytics.metrics.verified_count }}</div>
+      <div class="text-[11px] text-emerald-600/80 mt-1">In normalized tables</div>
     </div>
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Anomalies (Needs Review)</div>
-      <div class="text-3xl font-black {% if analytics.total_anomalies > 0 %}text-amber-600{% else %}text-[#111111]{% endif %}">
-        {% if analytics.has_data %}{{ analytics.total_anomalies }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
-      </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Total Spend Tracked</span>
+      <div class="text-2xl font-extrabold text-gray-900 mt-1">₹{{ "%.2f"|format(analytics.total_spend) }}</div>
+      <div class="text-[11px] text-gray-400 mt-1">Confirmed receipt bills</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+      <span class="text-xs text-gray-500 font-medium">Average Confidence</span>
+      <div class="text-2xl font-extrabold text-brand-red mt-1">{{ (analytics.metrics.average_confidence * 100)|round }}%</div>
+      <div class="text-[11px] text-gray-400 mt-1">Across all extractions</div>
     </div>
   </div>
 
-  <!-- Analytics Charts Grid -->
-  {% if analytics.has_data %}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Chart 1: Top Objects Detected -->
-      <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm">
-        <h2 class="text-base font-bold text-[#111111] mb-1">Most Frequent Object Classes</h2>
-        <p class="text-xs text-gray-400 mb-4">Highest occurrence labels detected by YOLO</p>
-        <div class="relative h-64">
-          <canvas id="topObjectsChart"></canvas>
-        </div>
-      </div>
+  <!-- Chart Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-      <!-- Chart 2: Category Distribution -->
-      <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm">
-        <h2 class="text-base font-bold text-[#111111] mb-1">Canonical Category Split</h2>
-        <p class="text-xs text-gray-400 mb-4">Object group proportions</p>
-        <div class="relative h-64 flex items-center justify-center">
-          <canvas id="categoryChart"></canvas>
-        </div>
+    <!-- Chart 1: Category Distribution -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">1. Category Distribution</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Ratio of receipts, marksheets, and business cards.</p>
       </div>
-
-      <!-- Chart 3: Scene Distribution -->
-      <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm">
-        <h2 class="text-base font-bold text-[#111111] mb-1">Scene Classifications</h2>
-        <p class="text-xs text-gray-400 mb-4">Settings classified via zero-shot CLIP</p>
-        <div class="relative h-64">
-          <canvas id="sceneChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Chart 4: Environment Split -->
-      <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm">
-        <h2 class="text-base font-bold text-[#111111] mb-1">Environment Ratio (Indoor vs Outdoor)</h2>
-        <p class="text-xs text-gray-400 mb-4">Visual context breakdown</p>
-        <div class="relative h-64 flex items-center justify-center">
-          <canvas id="envChart"></canvas>
-        </div>
-      </div>
-
-      <!-- Chart 5: Ingestion Trends (Full Width) -->
-      <div class="bg-white rounded-2xl border border-[#E5E5E5] p-6 shadow-sm lg:col-span-2">
-        <h2 class="text-base font-bold text-[#111111] mb-1">Monthly Ingestion & Indexing Volume</h2>
-        <p class="text-xs text-gray-400 mb-4">Images cataloged over time</p>
-        <div class="relative h-64">
-          <canvas id="monthlyTrendChart"></canvas>
-        </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="categoryDistChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
       </div>
     </div>
-  {% else %}
-    <div class="text-center py-20 bg-white rounded-2xl border border-[#E5E5E5] shadow-sm">
-      <svg class="w-14 h-14 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-      <h3 class="text-lg font-bold text-gray-800">No Analytics Data Yet</h3>
-      <p class="text-xs text-gray-400 mt-1 mb-5 max-w-sm mx-auto">Upload photographs to populate object detections, category breakdowns, and ingestion trend charts.</p>
-      <a href="/upload" class="inline-flex items-center space-x-2 px-5 py-2.5 bg-[#C62828] text-white rounded-lg text-xs font-bold hover:bg-red-700 transition shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        <span>Upload First Image</span>
-      </a>
+
+    <!-- Chart 2: Success vs Failure -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">2. Processing Pipeline Outcomes</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Success vs rejected/failed document counts.</p>
+      </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="successFailureChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
+      </div>
     </div>
-  {% endif %}
+
+    <!-- Chart 3: Monthly Volume Trend -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">3. Monthly Ingestion Trend</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Document ingestion frequency over time.</p>
+      </div>
+      <div class="h-60 mt-4 relative flex items-center justify-center">
+        {% if analytics.metrics.total_documents > 0 %}
+        <canvas id="monthlyTrendChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No data available yet</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 4: Top Shops by Spend -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-2">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">4. Top Merchants by Expenditure</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Aggregate spend breakdown across confirmed receipt vendors.</p>
+      </div>
+      <div class="h-64 mt-4 relative flex items-center justify-center">
+        {% if analytics.top_shops.labels %}
+        <canvas id="topShopsChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No confirmed receipts recorded yet. Approve a receipt in 'Review' to populate.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Chart 5: Student Marks Comparison -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-1">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900">5. Student Performance Comparison</h3>
+        <p class="text-xs text-gray-500 mt-0.5">Top student marksheet percentage ranks.</p>
+      </div>
+      <div class="h-64 mt-4 relative flex items-center justify-center">
+        {% if analytics.student_comparison.labels %}
+        <canvas id="studentPerformanceChart"></canvas>
+        {% else %}
+        <div class="text-center text-xs text-gray-400">No confirmed student marksheets yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
-{% if analytics.has_data %}
 <script>
-  // 1. Top Objects Horizontal Bar
-  const topObjEl = document.getElementById('topObjectsChart');
-  if (topObjEl) {
-    new Chart(topObjEl, {
+document.addEventListener("DOMContentLoaded", () => {
+  // Chart 1: Category Distribution
+  const catEl = document.getElementById('categoryDistChart');
+  if (catEl) {
+    const rawCounts = {{ analytics.metrics.category_counts|tojson }};
+    const labels = Object.keys(rawCounts).map(k => k.replace(/_/g, ' ').toUpperCase());
+    const dataVals = Object.values(rawCounts);
+    new Chart(catEl, {
+      type: 'doughnut',
+      data: {
+        labels: labels.length ? labels : ['Receipts'],
+        datasets: [{
+          data: dataVals.length ? dataVals : [1],
+          backgroundColor: ['#C62828', '#111827', '#10B981', '#F59E0B'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // Chart 2: Success vs Failure
+  const sfEl = document.getElementById('successFailureChart');
+  if (sfEl) {
+    new Chart(sfEl, {
+      type: 'pie',
+      data: {
+        labels: ['Successful / Verified', 'Rejected / Failed'],
+        datasets: [{
+          data: [{{ analytics.success_vs_failure.success }}, {{ analytics.success_vs_failure.failure }}],
+          backgroundColor: ['#10B981', '#EF4444'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+      }
+    });
+  }
+
+  // Chart 3: Monthly Trend
+  const trendEl = document.getElementById('monthlyTrendChart');
+  if (trendEl) {
+    new Chart(trendEl, {
+      type: 'line',
+      data: {
+        labels: {{ analytics.monthly_trend.labels|tojson }},
+        datasets: [{
+          label: 'Documents',
+          data: {{ analytics.monthly_trend['values']|tojson }},
+          borderColor: '#C62828',
+          backgroundColor: 'rgba(198, 40, 40, 0.08)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // Chart 4: Top Shops
+  const shopsEl = document.getElementById('topShopsChart');
+  if (shopsEl) {
+    new Chart(shopsEl, {
       type: 'bar',
       data: {
-        labels: {{ analytics.top_objects.labels|tojson }},
+        labels: {{ analytics.top_shops.labels|tojson }},
         datasets: [{
-          label: 'Count',
-          data: {{ analytics.top_objects.counts|tojson }},
+          label: 'Total Spend (₹)',
+          data: {{ analytics.top_shops.expenses|tojson }},
+          backgroundColor: '#111827',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' } }
+        }
+      }
+    });
+  }
+
+  // Chart 5: Student Performance
+  const studEl = document.getElementById('studentPerformanceChart');
+  if (studEl) {
+    new Chart(studEl, {
+      type: 'bar',
+      data: {
+        labels: {{ analytics.student_comparison.labels|tojson }},
+        datasets: [{
+          label: 'Score %',
+          data: {{ analytics.student_comparison.percentages|tojson }},
           backgroundColor: '#C62828',
           borderRadius: 6
         }]
@@ -122,111 +251,12 @@
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
-          y: { grid: { display: false } }
+          x: { max: 100, beginAtZero: true, grid: { color: '#F3F4F6' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } } }
         }
       }
     });
   }
-
-  // 2. Category Donut
-  const catEl = document.getElementById('categoryChart');
-  if (catEl) {
-    new Chart(catEl, {
-      type: 'doughnut',
-      data: {
-        labels: {{ analytics.category_dist.labels|tojson }},
-        datasets: [{
-          data: {{ analytics.category_dist.counts|tojson }},
-          backgroundColor: ['#C62828', '#111111', '#4B5563', '#9CA3AF', '#D1D5DB', '#DC2626', '#1F2937', '#6B7280'],
-          borderColor: '#FFFFFF',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }
-      }
-    });
-  }
-
-  // 3. Scene Bar
-  const sceneEl = document.getElementById('sceneChart');
-  if (sceneEl) {
-    new Chart(sceneEl, {
-      type: 'bar',
-      data: {
-        labels: {{ analytics.scene_dist.labels|tojson }},
-        datasets: [{
-          label: 'Images',
-          data: {{ analytics.scene_dist.counts|tojson }},
-          backgroundColor: '#111111',
-          borderRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
-        }
-      }
-    });
-  }
-
-  // 4. Environment Pie
-  const envEl = document.getElementById('envChart');
-  if (envEl) {
-    new Chart(envEl, {
-      type: 'pie',
-      data: {
-        labels: {{ analytics.env_dist.labels|tojson }},
-        datasets: [{
-          data: {{ analytics.env_dist.counts|tojson }},
-          backgroundColor: ['#C62828', '#1F2937'],
-          borderColor: '#FFFFFF',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
-      }
-    });
-  }
-
-  // 5. Ingestion Timeline Line
-  const trendEl = document.getElementById('monthlyTrendChart');
-  if (trendEl) {
-    new Chart(trendEl, {
-      type: 'line',
-      data: {
-        labels: {{ analytics.monthly_trend.labels|tojson }},
-        datasets: [{
-          label: 'Images Ingested',
-          data: {{ analytics.monthly_trend.counts|tojson }},
-          borderColor: '#C62828',
-          backgroundColor: 'rgba(198, 40, 40, 0.08)',
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: '#C62828'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
-        }
-      }
-    });
-  }
+});
 </script>
-{% endif %}
 {% endblock %}

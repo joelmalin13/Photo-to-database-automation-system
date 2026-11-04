@@ -1,212 +1,386 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | PIXELMIND Visual Intelligence{% endblock %}
-
 {% block content %}
-<div class="space-y-8">
-  <!-- Header Title -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-extrabold text-[#111111] tracking-tight">Visual Intelligence Overview</h1>
-      <p class="text-sm text-gray-500 mt-1">Real-time object detection metrics, category breakdowns, and visual DNA index.</p>
-    </div>
-    <div class="flex items-center space-x-3">
-      <a href="/upload" class="inline-flex items-center space-x-2 px-4 py-2 bg-[#C62828] text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        <span>Ingest Image</span>
-      </a>
-      <a href="/search" class="inline-flex items-center space-x-2 px-4 py-2 bg-white border border-[#E5E5E5] text-[#111111] rounded-lg text-sm font-semibold hover:bg-gray-50 transition shadow-sm">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <span>Search</span>
-      </a>
+<script>
+function askReceiptsWidget() {
+  return {
+    queryText: '',
+    answer: '',
+    loading: false,
+    askSample(text) {
+      this.queryText = text;
+      this.submitQuery();
+    },
+    async submitQuery() {
+      if (!this.queryText.trim()) return;
+      this.loading = true;
+      try {
+        const resp = await fetch('/api/ask-receipts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: this.queryText })
+        });
+        const data = await resp.json();
+        this.answer = data.answer || 'No answer found.';
+      } catch (err) {
+        this.answer = 'Error: ' + err.message;
+      } finally {
+        this.loading = false;
+        setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+      }
+    }
+  };
+}
+</script>
+<div class="space-y-6">
+
+  <!-- Slide 1 Project Hero Presentation Banner -->
+  <div class="bg-gradient-to-r from-gray-900 via-gray-900 to-black rounded-2xl p-6 text-white border border-gray-800 shadow-md">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div class="space-y-2">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-red-950/80 text-red-300 border border-red-800">
+          <i data-lucide="scan-line" class="w-3.5 h-3.5 text-brand-red"></i>
+          <span>KLE Technological University, Hubballi &middot; B.E. Computer Science &amp; Engineering</span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+          Photo to Database Automation System
+        </h1>
+        <p class="text-xs sm:text-sm text-gray-300 max-w-2xl leading-relaxed">
+          Turn a photo of a receipt into clean, searchable data &middot; 
+          <span class="text-red-400 font-semibold">100% Python</span> | 
+          <span class="text-emerald-400 font-semibold">OCR + SQLite</span> | 
+          <span class="text-amber-400 font-semibold">You Verify Every Record</span>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3 flex-wrap">
+        <a 
+          href="/upload" 
+          class="px-4 py-2.5 rounded-xl text-xs font-bold btn-primary inline-flex items-center gap-2 shadow-sm"
+        >
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span>Upload Receipt</span>
+        </a>
+        <a 
+          href="/review" 
+          class="px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-gray-900 hover:bg-gray-100 inline-flex items-center gap-2 shadow-sm"
+        >
+          <i data-lucide="check-square" class="w-4 h-4 text-emerald-600"></i>
+          <span>Split-Screen Review</span>
+        </a>
+        <a 
+          href="/analytics" 
+          class="px-4 py-2.5 rounded-xl text-xs font-bold bg-gray-800 text-gray-200 hover:bg-gray-700 border border-gray-700 inline-flex items-center gap-2 shadow-sm"
+        >
+          <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-400"></i>
+          <span>Spending Dashboard</span>
+        </a>
+      </div>
     </div>
   </div>
 
-  <!-- KPI Cards -->
+  <!-- Slide 6 #6: "Ask Your Receipts" Natural Language Query Widget -->
+  <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4" x-data="askReceiptsWidget()">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-red-50 text-brand-red flex items-center justify-center font-bold shadow-sm flex-shrink-0">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-gray-900">Ask Your Receipts</h2>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">Slide 6 #6</span>
+          </div>
+          <p class="text-xs text-gray-500">Query your receipts in natural English &mdash; instant aggregation directly from SQLite</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <div class="flex gap-2">
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <input 
+          type="text" 
+          x-model="queryText" 
+          @keydown.enter="submitQuery()"
+          placeholder="e.g. Total spent at ABC MART in November, or How much did I spend on Groceries?"
+          class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm focus:ring-2 focus:ring-brand-red focus:border-brand-red bg-white"
+        >
+      </div>
+      <button 
+        type="button" 
+        @click="submitQuery()" 
+        :disabled="loading || !queryText.trim()"
+        class="px-5 py-2.5 text-xs font-bold rounded-xl btn-primary inline-flex items-center gap-2 disabled:opacity-50 flex-shrink-0"
+      >
+        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        <span x-text="loading ? 'Asking...' : 'Ask'"></span>
+      </button>
+    </div>
+
+    <!-- Suggested Question Chips -->
+    <div class="flex flex-wrap items-center gap-2 text-xs">
+      <span class="text-gray-400 text-[11px] font-semibold">Try asking:</span>
+      <button type="button" @click="askSample('Total spent at ABC MART in November')" class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-[11px] transition">
+        "Total spent at ABC MART in November"
+      </button>
+      <button type="button" @click="askSample('How much did I spend on Groceries?')" class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-[11px] transition">
+        "How much spent on Groceries?"
+      </button>
+      <button type="button" @click="askSample('What was my highest expense?')" class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-[11px] transition">
+        "Highest expense?"
+      </button>
+      <button type="button" @click="askSample('Show receipts above 1000')" class="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 text-[11px] transition">
+        "Receipts above ₹1,000"
+      </button>
+    </div>
+
+    <!-- Answer Box -->
+    <div x-show="answer" class="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2 transition-all" style="display: none;">
+      <div class="flex items-start gap-3">
+        <div class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+        </div>
+        <div class="flex-1">
+          <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Answer</div>
+          <div class="text-sm font-bold text-gray-900 mt-0.5" x-text="answer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Top Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-    <!-- Card 1: Total Images -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="flex items-center justify-between text-gray-400 mb-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Total Images</span>
-        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+    
+    <!-- Total Ingested -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Documents</span>
+        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700">
+          <i data-lucide="files" class="w-4 h-4"></i>
+        </div>
       </div>
-      <div class="text-3xl font-black text-[#111111]">
-        {% if analytics.has_data %}{{ analytics.total_images }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-gray-900">{{ stats.total_documents }}</div>
+        <div class="text-xs text-gray-500 mt-1">Processed document photos</div>
       </div>
-      <div class="text-xs text-gray-500 mt-2">Indexed in database</div>
     </div>
 
-    <!-- Card 2: Total Objects -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="flex items-center justify-between text-gray-400 mb-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Detected Objects</span>
-        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+    <!-- Approved / Processed -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved Records</span>
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        </div>
       </div>
-      <div class="text-3xl font-black text-[#111111]">
-        {% if analytics.has_data %}{{ analytics.total_objects }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-emerald-600">{{ stats.status_counts.processed }}</div>
+        <div class="text-xs text-gray-500 mt-1">Verified & persisted to DB</div>
       </div>
-      <div class="text-xs text-gray-500 mt-2">Classified via YOLOv8n</div>
     </div>
 
-    <!-- Card 3: Categories -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="flex items-center justify-between text-gray-400 mb-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Categories</span>
-        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+    <!-- Pending Review -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Review</span>
+        <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+        </div>
       </div>
-      <div class="text-3xl font-black text-[#111111]">
-        {% if analytics.has_data %}{{ analytics.category_dist.labels|length }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
+      <div class="mt-3">
+        <div class="text-3xl font-extrabold text-amber-600">{{ stats.status_counts.pending }}</div>
+        <div class="text-xs text-gray-500 mt-1">Awaiting human sign-off</div>
       </div>
-      <div class="text-xs text-gray-500 mt-2">Canonical schema classes</div>
     </div>
 
-    <!-- Card 4: Anomalies -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
-      <div class="flex items-center justify-between text-gray-400 mb-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Needs Review</span>
-        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+    <!-- Extraction Accuracy -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Zero-Edit Accuracy</span>
+        <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-brand-red">
+          <i data-lucide="target" class="w-4 h-4"></i>
+        </div>
       </div>
-      <div class="text-3xl font-black {% if analytics.total_anomalies > 0 %}text-amber-600{% else %}text-[#111111]{% endif %}">
-        {% if analytics.has_data %}{{ analytics.total_anomalies }}{% else %}<span class="text-sm font-semibold text-gray-400">No data yet</span>{% endif %}
+      <div class="mt-3">
+        {% if stats.has_data %}
+        <div class="text-3xl font-extrabold text-gray-900">{{ stats.accuracy_rate }}%</div>
+        <div class="text-xs text-gray-500 mt-1">{{ stats.unedited_count }} of {{ stats.total_documents }} unedited</div>
+        {% else %}
+        <div class="text-2xl font-bold text-gray-400">No data yet</div>
+        <div class="text-xs text-gray-400 mt-1">Ingest images to calculate</div>
+        {% endif %}
       </div>
-      <div class="text-xs text-gray-500 mt-2">Statistical outlier flags</div>
     </div>
+
   </div>
 
   <!-- Charts Row -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Chart 1: Category Distribution -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Ingestion Timeline -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-base font-bold text-[#111111]">Category Distribution</h2>
-        <span class="text-xs text-gray-400">Object compositions</span>
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Ingestion Volume Over Time</h2>
+          <p class="text-xs text-gray-500">Daily document processing activity</p>
+        </div>
+        <i data-lucide="trending-up" class="w-4 h-4 text-gray-400"></i>
       </div>
-      <div class="relative h-64 flex items-center justify-center">
-        {% if analytics.has_data and analytics.category_dist.counts %}
-          <canvas id="categoryDonutChart"></canvas>
+      <div class="h-64">
+        {% if stats.has_data and stats.timeseries.labels %}
+        <canvas id="timelineChart"></canvas>
         {% else %}
-          <div class="text-center text-gray-400">
-            <svg class="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2"></path></svg>
-            <p class="text-sm font-medium">No data yet</p>
-            <p class="text-xs mt-1 text-gray-400">Upload images to view category split</p>
-          </div>
+        <div class="h-full flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="bar-chart-2" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No activity recorded yet</span>
+        </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Chart 2: Upload Trend -->
-    <div class="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-sm">
+    <!-- Status Distribution Donut -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-base font-bold text-[#111111]">Ingestion Timeline</h2>
-        <span class="text-xs text-gray-400">Monthly volume</span>
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Status Breakdown</h2>
+          <p class="text-xs text-gray-500">Approval vs rejection distribution</p>
+        </div>
+        <i data-lucide="pie-chart" class="w-4 h-4 text-gray-400"></i>
       </div>
-      <div class="relative h-64 flex items-center justify-center">
-        {% if analytics.has_data and analytics.monthly_trend.counts %}
-          <canvas id="monthlyTrendChart"></canvas>
+      <div class="h-64 flex items-center justify-center">
+        {% if stats.has_data %}
+        <canvas id="statusChart"></canvas>
         {% else %}
-          <div class="text-center text-gray-400">
-            <svg class="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
-            <p class="text-sm font-medium">No data yet</p>
-            <p class="text-xs mt-1 text-gray-400">Upload images to track monthly ingestion</p>
-          </div>
+        <div class="flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="pie-chart" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No data yet</span>
+        </div>
         {% endif %}
       </div>
     </div>
+
   </div>
 
-  <!-- Recent Ingested Images -->
-  <div class="bg-white rounded-xl border border-[#E5E5E5] p-6 shadow-sm">
-    <div class="flex items-center justify-between mb-5">
-      <div>
-        <h2 class="text-lg font-bold text-[#111111]">Recent Ingested Images</h2>
-        <p class="text-xs text-gray-500">Latest photographs analyzed and stored in the database</p>
+  <!-- Lower Section: Document Type Bar & Recent Activity -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Classification Types -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Documents by Schema</h2>
+          <p class="text-xs text-gray-500">Classification count</p>
+        </div>
+        <i data-lucide="layers" class="w-4 h-4 text-gray-400"></i>
       </div>
-      <a href="/gallery" class="text-xs font-semibold text-[#C62828] hover:underline flex items-center space-x-1">
-        <span>View all in gallery</span>
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-      </a>
+      <div class="h-64">
+        {% if stats.has_data %}
+        <canvas id="typesChart"></canvas>
+        {% else %}
+        <div class="h-full flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="layers" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No schema data</span>
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    {% if recent_images %}
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-        {% for img in recent_images %}
-          <a href="/images/{{ img.id }}" class="group block rounded-lg border border-[#E5E5E5] overflow-hidden hover:shadow-md transition">
-            <div class="aspect-square bg-gray-100 overflow-hidden relative">
-              <img src="{{ img.stored_path | media_url }}" alt="{{ img.filename }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-200">
-              <span class="absolute bottom-1.5 left-1.5 bg-black/70 backdrop-blur text-white text-[10px] font-semibold px-2 py-0.5 rounded">
-                {{ img.category }}
-              </span>
-            </div>
-            <div class="p-2.5 bg-white">
-              <div class="text-xs font-semibold text-gray-800 truncate">{{ img.filename }}</div>
-              <div class="text-[10px] text-gray-400 mt-0.5 flex items-center justify-between">
-                <span>{{ img.detections|length }} objects</span>
-                <span class="capitalize">{{ img.environment or 'General' }}</span>
-              </div>
-            </div>
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="text-center py-12 border-2 border-dashed border-gray-200 rounded-xl">
-        <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-        <p class="text-sm font-semibold text-gray-700">No images ingested yet</p>
-        <p class="text-xs text-gray-400 mt-1 mb-4">Start by uploading a photograph to populate object detections and DNA.</p>
-        <a href="/upload" class="inline-flex items-center space-x-1.5 px-4 py-2 bg-[#C62828] text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          <span>Upload First Image</span>
+    <!-- Recent Activity Feed -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-sm font-bold text-gray-900">Recent Ingestion Activity</h2>
+          <p class="text-xs text-gray-500">Latest document uploads and verifications</p>
+        </div>
+        <a href="/records" class="text-xs font-semibold text-brand-red hover:underline flex items-center gap-1">
+          <span>View All</span>
+          <i data-lucide="arrow-right" class="w-3 h-3"></i>
         </a>
       </div>
-    {% endif %}
+
+      <div class="flex-1 overflow-x-auto">
+        {% if stats.recent_activity %}
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wider">
+              <th class="py-2.5 font-semibold">ID</th>
+              <th class="py-2.5 font-semibold">Filename</th>
+              <th class="py-2.5 font-semibold">Schema</th>
+              <th class="py-2.5 font-semibold">Status</th>
+              <th class="py-2.5 font-semibold">Date</th>
+              <th class="py-2.5 text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for item in stats.recent_activity %}
+            <tr class="hover:bg-gray-50/70 transition-colors">
+              <td class="py-3 font-mono text-xs font-bold text-gray-500">#{{ item.id }}</td>
+              <td class="py-3 font-medium text-gray-900 truncate max-w-xs">{{ item.filename }}</td>
+              <td class="py-3 text-xs text-gray-600">{{ item.type|replace('_', ' ')|title }}</td>
+              <td class="py-3">
+                {% if item.status == 'processed' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Approved
+                </span>
+                {% elif item.status == 'rejected' %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Rejected
+                </span>
+                {% else %}
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pending
+                </span>
+                {% endif %}
+              </td>
+              <td class="py-3 text-xs text-gray-500">{{ item.created_at }}</td>
+              <td class="py-3 text-right">
+                <a href="/review/{{ item.id }}" class="text-xs font-semibold text-brand-red hover:underline">
+                  Inspect
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="h-44 flex flex-col items-center justify-center text-gray-400">
+          <i data-lucide="inbox" class="w-8 h-8 mb-2 stroke-[1.5]"></i>
+          <span class="text-sm font-medium">No documents processed yet</span>
+          <a href="/upload" class="mt-3 px-3 py-1.5 text-xs font-semibold rounded-lg btn-primary inline-flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Upload Document</span>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
   </div>
+
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
-{% if analytics.has_data %}
+<!-- Chart.js Render Scripts -->
+{% if stats.has_data %}
 <script>
-  // Category Donut Chart
-  const catEl = document.getElementById('categoryDonutChart');
-  if (catEl) {
-    new Chart(catEl, {
-      type: 'doughnut',
-      data: {
-        labels: {{ analytics.category_dist.labels|tojson }},
-        datasets: [{
-          data: {{ analytics.category_dist.counts|tojson }},
-          backgroundColor: [
-            '#C62828', '#111111', '#4B5563', '#9CA3AF', '#D1D5DB',
-            '#DC2626', '#1F2937', '#6B7280', '#E5E7EB'
-          ],
-          borderWidth: 2,
-          borderColor: '#FFFFFF'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11, family: 'Inter' } } }
-        }
-      }
-    });
-  }
-
-  // Monthly Trend Line Chart
-  const trendEl = document.getElementById('monthlyTrendChart');
-  if (trendEl) {
-    new Chart(trendEl, {
+document.addEventListener("DOMContentLoaded", () => {
+  // Timeline Chart
+  const ctxTimeline = document.getElementById('timelineChart');
+  if (ctxTimeline) {
+    new Chart(ctxTimeline, {
       type: 'line',
       data: {
-        labels: {{ analytics.monthly_trend.labels|tojson }},
+        labels: {{ stats.timeseries.labels|tojson }},
         datasets: [{
-          label: 'Images Ingested',
-          data: {{ analytics.monthly_trend.counts|tojson }},
+          label: 'Documents',
+          data: {{ stats.timeseries['values']|tojson }},
           borderColor: '#C62828',
-          backgroundColor: 'rgba(198, 40, 40, 0.08)',
+          backgroundColor: 'rgba(198, 40, 40, 0.06)',
+          tension: 0.3,
           fill: true,
-          tension: 0.35,
-          pointBackgroundColor: '#C62828'
+          pointBackgroundColor: '#C62828',
+          pointRadius: 4,
         }]
       },
       options: {
@@ -214,12 +388,69 @@
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' } } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
           y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
         }
       }
     });
   }
+
+  // Status Donut Chart
+  const ctxStatus = document.getElementById('statusChart');
+  if (ctxStatus) {
+    new Chart(ctxStatus, {
+      type: 'doughnut',
+      data: {
+        labels: ['Approved', 'Pending', 'Rejected'],
+        datasets: [{
+          data: [
+            {{ stats.status_counts.processed }},
+            {{ stats.status_counts.pending }},
+            {{ stats.status_counts.rejected }}
+          ],
+          backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+          borderWidth: 2,
+          borderColor: '#FFFFFF',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+
+  // Document Types Bar Chart
+  const ctxTypes = document.getElementById('typesChart');
+  if (ctxTypes) {
+    const typeLabels = Object.keys({{ stats.type_counts|tojson }}).map(k => k.replace(/_/g, ' ').toUpperCase());
+    const typeValues = Object.values({{ stats.type_counts|tojson }});
+    new Chart(ctxTypes, {
+      type: 'bar',
+      data: {
+        labels: typeLabels,
+        datasets: [{
+          data: typeValues,
+          backgroundColor: '#111827',
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+});
 </script>
 {% endif %}
 {% endblock %}
