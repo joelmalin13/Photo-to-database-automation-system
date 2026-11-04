@@ -94,7 +94,7 @@ class DnaService:
 
             for img, dna, detections in stored_items:
                 t_vec = dna.get_embedding_vector() if dna else None
-                if q_vec and t_vec:
+                if q_vec is not None and t_vec is not None:
                     sim = self.embedder.compute_similarity(q_vec, t_vec)
                 else:
                     sim = 0.0
@@ -153,7 +153,7 @@ class DnaService:
             q_vec = target_img.dna.get_embedding_vector() if target_img.dna else None
             for img, dna, detections in other_items:
                 t_vec = dna.get_embedding_vector() if dna else None
-                if q_vec and t_vec:
+                if q_vec is not None and t_vec is not None:
                     sim = self.embedder.compute_similarity(q_vec, t_vec)
                 else:
                     sim = 0.0

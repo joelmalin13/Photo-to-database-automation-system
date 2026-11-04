@@ -41,6 +41,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Custom styles -->
+  <link rel="stylesheet" href="/static/css/app.css">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #FAFAFA; color: #1F1F1F; }
     .header-gradient { background: linear-gradient(90deg, #111111 0%, #C62828 100%); }
@@ -172,6 +173,9 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+
+  <!-- Application JS Utilities -->
+  <script src="/static/js/app.js"></script>
 
   {% block extra_scripts %}{% endblock %}
 </body>

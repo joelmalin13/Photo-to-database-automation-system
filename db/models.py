@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import numpy as np
 from sqlalchemy import (
     DateTime,
     Float,
@@ -155,6 +156,24 @@ class ImageDNA(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     image: Mapped[Image] = relationship("Image", back_populates="dna")
+
+    def get_embedding_vector(self) -> Optional[np.ndarray]:
+        """Return embedding as a normalized numpy float32 array."""
+        if self.embedding_json:
+            try:
+                arr = np.array(self.embedding_json, dtype=np.float32)
+                norm = float(np.linalg.norm(arr))
+                return arr / norm if norm > 0 else arr
+            except Exception:
+                pass
+        if self.embedding_blob:
+            try:
+                arr = np.frombuffer(self.embedding_blob, dtype=np.float32)
+                norm = float(np.linalg.norm(arr))
+                return arr / norm if norm > 0 else arr
+            except Exception:
+                pass
+        return None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert DNA record to dictionary representation."""

@@ -72,6 +72,9 @@ async def upload_images(
     for file in files:
         try:
             content = await file.read()
+            if len(content) > 4 * 1024 * 1024:
+                errors.append(f"{file.filename}: Payload too large (> 4 MB limit). Please use client-side compression.")
+                continue
             img, is_dup, msg = service.ingest_image(
                 filename=file.filename or "uploaded.jpg",
                 file_bytes=content,
@@ -111,6 +114,11 @@ async def upload_single_image(
     service = ImageService(db)
     try:
         content = await file.read()
+        if len(content) > 4 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Payload too large: Image exceeds 4 MB serverless upload limit. Please use client-side compression before uploading.",
+            )
         img, is_dup, msg = service.ingest_image(
             filename=file.filename or "uploaded.jpg",
             file_bytes=content,
@@ -124,6 +132,8 @@ async def upload_single_image(
             "status": img.status,
             "image": item_dict,
         }
+    except HTTPException:
+        raise
     except InvalidImageError as err:
         raise HTTPException(status_code=400, detail=err.message)
     except Exception as exc:
@@ -324,17 +334,21 @@ def status_endpoint() -> Dict[str, Any]:
 )
 def health_endpoint() -> Dict[str, Any]:
     """Health check endpoint for monitoring, uptime verification, and deployment sanity."""
+    from core.storage import get_storage
+
     db_stat = get_db_status()
+    try:
+        storage_stat = get_storage().health_check()
+    except Exception as exc:
+        storage_stat = {"backend": STORAGE_BACKEND, "status": "error", "message": str(exc)}
+
     is_healthy = db_stat.get("connected", False)
     return {
         "status": "healthy" if is_healthy else "degraded",
         "mode": AI_MODE,
         "is_vercel": IS_VERCEL,
         "database": db_stat,
-        "storage": {
-            "backend": STORAGE_BACKEND,
-            "status": "ready",
-        },
+        "storage": storage_stat,
         "ai": {
             "detector": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n",
             "embedder": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",

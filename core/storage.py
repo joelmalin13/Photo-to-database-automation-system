@@ -117,6 +117,7 @@ class LocalStorage(StorageBackend):
     def health_check(self) -> Dict[str, Any]:
         return {
             "type": "local",
+            "backend": "local",
             "status": "ok",
             "upload_dir": str(self.upload_dir),
             "annotated_dir": str(self.annotated_dir),
@@ -212,6 +213,7 @@ class SupabaseStorage(StorageBackend):
         if not self.url or not self.key:
             return {
                 "type": "supabase",
+                "backend": "supabase",
                 "status": "unconfigured",
                 "message": "SUPABASE_URL or SUPABASE_SERVICE_KEY missing in environment.",
                 "bucket": self.bucket,
@@ -222,9 +224,10 @@ class SupabaseStorage(StorageBackend):
                 headers={"Authorization": f"Bearer {self.key}", "apikey": self.key},
             )
             if resp.status_code == 200:
-                return {"type": "supabase", "status": "ok", "bucket": self.bucket}
+                return {"type": "supabase", "backend": "supabase", "status": "ok", "bucket": self.bucket}
             return {
                 "type": "supabase",
+                "backend": "supabase",
                 "status": "warning",
                 "message": f"Bucket query returned HTTP {resp.status_code}",
                 "bucket": self.bucket,
@@ -232,6 +235,7 @@ class SupabaseStorage(StorageBackend):
         except Exception as exc:
             return {
                 "type": "supabase",
+                "backend": "supabase",
                 "status": "error",
                 "message": str(exc),
                 "bucket": self.bucket,

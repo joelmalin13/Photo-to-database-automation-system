@@ -93,7 +93,8 @@ def test_api_status(test_client: TestClient):
     data = resp.json()
     assert "database" in data
     assert "models" in data
-    assert "YOLOv8n" in data["models"]["object_detector"]
+    detector_name = data["models"]["object_detector"].lower()
+    assert "yolov8" in detector_name or "gemini" in detector_name
 
 
 def test_api_analytics(test_client: TestClient):

@@ -48,6 +48,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Reject upload payloads over 4 MB with a friendly message
+@app.middleware("http")
+async def limit_upload_payload(request: Request, call_next):
+    if request.url.path.startswith("/api/images"):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > 4 * 1024 * 1024:
+                    return JSONResponse(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        content={
+                            "success": False,
+                            "error": "Payload too large: Image exceeds 4 MB serverless upload limit. Please use client-side compression.",
+                            "detail": "Payload too large: Image exceeds 4 MB serverless upload limit. Please use client-side compression.",
+                        },
+                    )
+            except ValueError:
+                pass
+    return await call_next(request)
+
 # Static asset directory (checks public/static first for Vercel, falls back to app/static)
 static_dir = BASE_DIR / "public" / "static"
 if not static_dir.exists():
@@ -75,17 +95,21 @@ def root_health_check() -> Dict[str, Any]:
         SUPABASE_URL,
     )
     from db.session import get_db_status
+    from core.storage import get_storage
+
     db_stat = get_db_status()
+    try:
+        storage_stat = get_storage().health_check()
+    except Exception as exc:
+        storage_stat = {"backend": STORAGE_BACKEND, "status": "error", "message": str(exc)}
+
     is_healthy = db_stat.get("connected", False)
     return {
         "status": "healthy" if is_healthy else "degraded",
         "mode": AI_MODE,
         "is_vercel": IS_VERCEL,
         "database": db_stat,
-        "storage": {
-            "backend": STORAGE_BACKEND,
-            "status": "ready",
-        },
+        "storage": storage_stat,
         "ai": {
             "detector": GEMINI_MODEL if AI_MODE == "cloud" else "YOLOv8n",
             "embedder": GEMINI_EMBED_MODEL if AI_MODE == "cloud" else "CLIP ViT-B-32",

@@ -128,18 +128,25 @@ def create_resilient_engine() -> Engine:
                     f"Cloud mode database connection failed ({exc}). Please verify DB_URL in environment variables."
                 ) from exc
 
-    # 3. Cloud mode without DB_URL must warn / inform
+    # 3. Cloud mode without DB_URL must give a clear error and never silently use SQLite
     if (IS_VERCEL or AI_MODE == "cloud") and not raw_url:
         _db_status = {
             "engine_name": "Hosted DB Required",
             "is_fallback": False,
             "connected": False,
-            "message": "Cloud mode requires DB_URL (Supabase/Neon PostgreSQL or MySQL).",
+            "message": "Cloud mode requires DB_URL (Supabase/Neon PostgreSQL or MySQL). Silent SQLite fallback is disabled.",
             "url_masked": "",
         }
-        # In cloud test environments, allow graceful local fallback if explicitly enabled
-        if not os.getenv("ALLOW_LOCAL_FALLBACK_IN_CLOUD"):
-            logger.warning("DB_URL missing in cloud mode. Falling back to temporary SQLite for diagnostics.")
+        logger.error("DB_URL missing in cloud mode. Silent SQLite fallback is disabled.")
+
+        def _cloud_db_unconfigured_creator(*args: Any, **kwargs: Any) -> Any:
+            raise RuntimeError(
+                "Cloud mode database error: DB_URL is not set. In cloud/serverless mode, "
+                "a hosted database (Supabase/Neon PostgreSQL or MySQL) is required. "
+                "Silent SQLite fallback is disabled to prevent data loss on ephemeral serverless filesystems."
+            )
+
+        return create_engine("sqlite://", creator=_cloud_db_unconfigured_creator)
 
     # 4. Local SQLite Default
     sqlite_url = DEFAULT_SQLITE_URL
@@ -175,6 +182,12 @@ def get_db_status() -> Dict[str, Any]:
 def init_db() -> None:
     """Initialize database tables idempotently with thread-safe guard."""
     global _tables_initialized
+    if (IS_VERCEL or AI_MODE == "cloud") and not DB_URL and not (os.getenv("TESTING") == "1" or (DB_URL or "").startswith("sqlite:///:memory:")):
+        raise RuntimeError(
+            "Cloud mode database error: DB_URL is not set. In cloud/serverless mode, "
+            "a hosted database (Supabase/Neon PostgreSQL or MySQL) is required. "
+            "Silent SQLite fallback is disabled to prevent data loss on ephemeral serverless filesystems."
+        )
     with _init_lock:
         if not _tables_initialized:
             try:
@@ -189,6 +202,12 @@ def init_db() -> None:
 @contextmanager
 def get_db_session() -> Generator[Session, None, None]:
     """Context manager yielding a transactional database session."""
+    if (IS_VERCEL or AI_MODE == "cloud") and not DB_URL and not (os.getenv("TESTING") == "1" or (DB_URL or "").startswith("sqlite:///:memory:")):
+        raise RuntimeError(
+            "Cloud mode database error: DB_URL is not set. In cloud/serverless mode, "
+            "a hosted database (Supabase/Neon PostgreSQL or MySQL) is required. "
+            "Silent SQLite fallback is disabled to prevent data loss on ephemeral serverless filesystems."
+        )
     session: Session = SessionFactory()
     try:
         yield session
@@ -203,6 +222,12 @@ def get_db_session() -> Generator[Session, None, None]:
 
 def get_db() -> Generator[Session, None, None]:
     """FastAPI dependency for injecting transactional database sessions into routes."""
+    if (IS_VERCEL or AI_MODE == "cloud") and not DB_URL and not (os.getenv("TESTING") == "1" or (DB_URL or "").startswith("sqlite:///:memory:")):
+        raise RuntimeError(
+            "Cloud mode database error: DB_URL is not set. In cloud/serverless mode, "
+            "a hosted database (Supabase/Neon PostgreSQL or MySQL) is required. "
+            "Silent SQLite fallback is disabled to prevent data loss on ephemeral serverless filesystems."
+        )
     session: Session = SessionFactory()
     try:
         yield session
